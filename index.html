@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quiz des municipalités du Québec</title>
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem("quebec-quiz-theme") === "dark") {
+            document.documentElement.dataset.theme = "dark";
+          }
+        } catch (_e) {
+          /* ignore */
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..700;1,14..32,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=20260722n" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-inner">
+        <details class="creator-note creator-note--header">
+          <summary class="creator-note-summary" data-i18n="creatorWordsTitle">
+            Mots du créateur
+          </summary>
+          <div class="creator-note-body" data-i18n-html="creatorWordsBody"></div>
+        </details>
+        <div class="lang-switch" role="group" data-i18n-aria="langSwitchAria">
+          <button type="button" id="lang-fr" class="lang-btn is-active" data-lang="fr">
+            FR
+          </button>
+          <button type="button" id="lang-en" class="lang-btn" data-lang="en">
+            EN
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <div class="map-wrap">
+        <div
+          id="map"
+          class="map"
+          role="application"
+          data-i18n-aria="mapAria"
+          aria-label="Carte du Québec"
+        ></div>
+
+        <div id="map-pause-overlay" class="map-pause-overlay hidden" aria-hidden="true">
+          <span data-i18n="pause">Pause</span>
+        </div>
+
+        <div
+          id="misc-quiz-overlay"
+          class="misc-quiz-overlay hidden"
+          aria-hidden="true"
+        >
+          <div class="misc-quiz-card card">
+            <p id="misc-quiz-instructions" class="misc-quiz-instructions"></p>
+            <table class="misc-leaderboard" aria-labelledby="misc-leaderboard-caption">
+              <caption id="misc-leaderboard-caption" class="sr-only"></caption>
+              <thead>
+                <tr>
+                  <th scope="col" data-i18n="miscLeaderboardRank">Rang</th>
+                  <th scope="col" data-i18n="miscLeaderboardSaint">Saint / Sainte</th>
+                  <th scope="col" data-i18n="miscLeaderboardCount">Municipalités</th>
+                </tr>
+              </thead>
+              <tbody id="misc-leaderboard-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <section
+          id="setup-section"
+          class="setup-section"
+          data-i18n-aria="setupSectionAria"
+          aria-label="Configuration du quiz"
+        >
+          <div class="setup-inner setup-inner--mode-step" id="setup-inner">
+            <div id="setup-step-mode" class="setup-step">
+              <h1 class="setup-mode-title" data-i18n="pickGameModeTitle">
+                Choisir le mode de jeu
+              </h1>
+              <p
+                id="setup-load-error"
+                class="setup-load-error hidden"
+                role="alert"
+                aria-live="assertive"
+              ></p>
+              <div id="setup-mode-picker" class="setup-mode-picker">
+                <div class="mode-card-grid">
+                  <label
+                    class="mode-card"
+                    data-i18n-aria="gameModeLocateAria"
+                  >
+                    <input
+                      type="radio"
+                      name="game-mode"
+                      value="locate"
+                      id="game-mode-locate"
+                      class="sr-only"
+                      checked
+                    />
+                    <div class="mode-demo mode-demo--locate" aria-hidden="true">
+                      <div class="mode-demo-map">
+                        <div class="mode-demo-stage">
+                          <p class="mode-demo-prompt" data-i18n="modeDemoLocateLabel">
+                            Saint-Augustin
+                          </p>
+                          <svg
+                            class="mode-demo-svg"
+                            viewBox="0.7 0.62 98.6 98.6"
+                            preserveAspectRatio="xMidYMid meet"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                          <g class="mode-demo-scene">
+                          <path class="mode-demo-boundary" d="M69.79,43.08 L86.93,46.52 L75.83,52.47 L74.97,57.42 L77.90,61.54 L68.70,67.98 L58.47,71.26 L53.82,71.62 L42.44,69.29 L35.54,65.37 L29.70,63.53 L24.51,64.70 L20.83,63.74 L14.40,57.56 L29.52,48.84 L38.22,50.65 L37.05,53.93 L44.01,55.32 L41.70,61.89 L61.80,66.12 L69.79,43.08 Z"/>
+                          <path class="mode-demo-boundary" d="M23.39,66.69 L23.56,66.60 L23.65,66.60 L23.68,66.67 L23.88,66.74 L24.19,66.73 L24.41,66.65 L24.47,66.71 L24.17,67.55 L23.84,68.29 L23.74,68.68 L23.77,68.98 L23.73,69.55 L23.77,69.68 L23.95,69.98 L23.90,70.02 L23.68,70.01 L23.48,69.90 L22.36,68.93 L21.01,68.01 L20.94,67.91 L20.90,67.62 L21.09,67.49 L21.17,67.26 L21.26,67.27 L21.28,67.44 L21.59,67.35 L21.88,67.17 L21.93,67.15 L22.37,67.01 L22.51,66.99 L22.78,66.87 L22.88,66.79 L23.03,66.79 L23.39,66.69 Z"/>
+                          <path class="mode-demo-boundary" d="M89.83,49.77 L90.55,50.99 L92.53,49.36 L94.42,49.46 L96.30,54.17 L89.32,75.37 L73.30,72.06 L72.21,75.27 L64.59,73.63 L61.50,82.42 L46.28,83.80 L39.61,80.81 L32.28,74.67 L30.40,74.34 L27.63,70.97 L28.19,71.97 L27.44,72.66 L26.59,71.28 L26.87,66.24 L30.59,64.76 L35.88,66.65 L40.34,69.98 L46.32,71.55 L57.02,72.25 L67.74,69.21 L78.04,61.34 L74.97,57.42 L76.44,51.75 L84.24,48.57 L85.26,46.79 L88.89,47.81 L89.83,49.77 Z"/>
+                          <path class="mode-demo-boundary" d="M54.20,4.86 L71.60,4.28 L72.72,6.31 L72.01,8.09 L69.47,8.86 L67.96,12.15 L68.82,13.02 L66.66,13.39 L66.20,15.10 L64.82,15.79 L64.96,18.40 L63.69,20.67 L56.84,22.54 L57.89,22.93 L56.67,23.24 L53.95,27.25 L55.44,28.19 L54.76,29.24 L55.51,32.06 L46.04,38.15 L47.02,38.36 L44.78,44.92 L40.35,44.03 L39.38,47.39 L35.88,46.67 L34.75,49.92 L29.52,48.84 L14.40,57.56 L3.70,46.69 L9.38,43.34 L6.64,40.64 L18.01,34.08 L12.71,28.70 L54.20,4.86 Z"/>
+                          <path class="mode-demo-boundary" d="M72.41,17.49 L85.54,20.17 L84.43,23.34 L92.58,25.04 L89.93,26.65 L91.59,28.08 L90.20,30.95 L88.33,31.55 L89.82,33.50 L90.35,36.83 L88.73,37.22 L88.65,39.38 L85.18,43.27 L87.80,44.92 L86.93,46.52 L59.48,40.90 L68.04,16.61 L72.41,17.49 Z"/>
+                          <path class="mode-demo-boundary" d="M73.30,72.06 L89.32,75.37 L82.95,95.51 L80.77,95.56 L78.09,89.79 L78.86,89.03 L76.56,90.25 L77.65,88.13 L74.94,88.76 L74.93,90.46 L70.66,87.84 L67.24,83.94 L61.50,82.42 L64.59,73.63 L72.21,75.27 L73.30,72.06 Z"/>
+                          <path class="mode-demo-boundary mode-demo-boundary--focus" d="M47.02,38.36 L69.79,43.08 L61.80,66.12 L41.70,61.89 L44.01,55.32 L37.05,53.93 L38.22,50.65 L34.75,49.92 L35.88,46.67 L39.38,47.39 L40.35,44.03 L44.78,44.92 L47.02,38.36 Z"/>
+                          <circle class="mode-demo-muni-dot" cx="30.05" cy="56.37" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="82.58" cy="65.5" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="34.88" cy="30.65" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="75.75" cy="32.52" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="75.61" cy="83.18" r="1.35"/>
+                          <circle class="mode-demo-muni-dot mode-demo-muni-dot--target" cx="52.12" cy="52.29" r="1.5"/>
+                          <g class="mode-demo-cursor-group">
+                            <animateTransform
+                              attributeName="transform"
+                              type="translate"
+                              dur="3.2s"
+                              repeatCount="indefinite"
+                              values="48,14; 48,14; 52.12,52.29; 52.12,52.29"
+                              keyTimes="0;0.12;0.45;1"
+                            />
+                            <path class="mode-demo-cursor-shape" d="M0,0 L0,5.5 L3.8,4.2 L2.2,7.5 Z"/>
+                          </g>
+                          </g>
+                        </svg>
+                        </div>
+                      </div>
+                      <div class="mode-demo-search mode-demo-search--reserve" aria-hidden="true">
+                        <div class="mode-demo-input">
+                          <span class="mode-demo-input-text" aria-hidden="true">&#8203;</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span class="mode-card-title" data-i18n="gameModeLocateTitle"
+                      >Trouver sur la carte</span
+                    >
+                    <span class="mode-card-desc" data-i18n="gameModeLocateDesc"
+                      >Sélectionner le bon point sur la carte.</span
+                    >
+                  </label>
+                  <label class="mode-card" data-i18n-aria="gameModeTenAria">
+                    <input
+                      type="radio"
+                      name="game-mode"
+                      value="ten"
+                      id="game-mode-ten"
+                      class="sr-only"
+                    />
+                    <div class="mode-demo mode-demo--ten mode-demo--locate" aria-hidden="true">
+                      <div class="mode-demo-map">
+                        <div class="mode-demo-stage">
+                          <p class="mode-demo-prompt">Roberval</p>
+                          <svg
+                            class="mode-demo-svg"
+                            viewBox="0.7 0.62 98.6 98.6"
+                            preserveAspectRatio="xMidYMid meet"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                          <g class="mode-demo-scene">
+                          <path class="mode-demo-boundary" d="M69.79,43.08 L86.93,46.52 L75.83,52.47 L74.97,57.42 L77.90,61.54 L68.70,67.98 L58.47,71.26 L53.82,71.62 L42.44,69.29 L35.54,65.37 L29.70,63.53 L24.51,64.70 L20.83,63.74 L14.40,57.56 L29.52,48.84 L38.22,50.65 L37.05,53.93 L44.01,55.32 L41.70,61.89 L61.80,66.12 L69.79,43.08 Z"/>
+                          <path class="mode-demo-boundary" d="M23.39,66.69 L23.56,66.60 L23.65,66.60 L23.68,66.67 L23.88,66.74 L24.19,66.73 L24.41,66.65 L24.47,66.71 L24.17,67.55 L23.84,68.29 L23.74,68.68 L23.77,68.98 L23.73,69.55 L23.77,69.68 L23.95,69.98 L23.90,70.02 L23.68,70.01 L23.48,69.90 L22.36,68.93 L21.01,68.01 L20.94,67.91 L20.90,67.62 L21.09,67.49 L21.17,67.26 L21.26,67.27 L21.28,67.44 L21.59,67.35 L21.88,67.17 L21.93,67.15 L22.37,67.01 L22.51,66.99 L22.78,66.87 L22.88,66.79 L23.03,66.79 L23.39,66.69 Z"/>
+                          <path class="mode-demo-boundary" d="M89.83,49.77 L90.55,50.99 L92.53,49.36 L94.42,49.46 L96.30,54.17 L89.32,75.37 L73.30,72.06 L72.21,75.27 L64.59,73.63 L61.50,82.42 L46.28,83.80 L39.61,80.81 L32.28,74.67 L30.40,74.34 L27.63,70.97 L28.19,71.97 L27.44,72.66 L26.59,71.28 L26.87,66.24 L30.59,64.76 L35.88,66.65 L40.34,69.98 L46.32,71.55 L57.02,72.25 L67.74,69.21 L78.04,61.34 L74.97,57.42 L76.44,51.75 L84.24,48.57 L85.26,46.79 L88.89,47.81 L89.83,49.77 Z"/>
+                          <path class="mode-demo-boundary" d="M54.20,4.86 L71.60,4.28 L72.72,6.31 L72.01,8.09 L69.47,8.86 L67.96,12.15 L68.82,13.02 L66.66,13.39 L66.20,15.10 L64.82,15.79 L64.96,18.40 L63.69,20.67 L56.84,22.54 L57.89,22.93 L56.67,23.24 L53.95,27.25 L55.44,28.19 L54.76,29.24 L55.51,32.06 L46.04,38.15 L47.02,38.36 L44.78,44.92 L40.35,44.03 L39.38,47.39 L35.88,46.67 L34.75,49.92 L29.52,48.84 L14.40,57.56 L3.70,46.69 L9.38,43.34 L6.64,40.64 L18.01,34.08 L12.71,28.70 L54.20,4.86 Z"/>
+                          <path class="mode-demo-boundary" d="M72.41,17.49 L85.54,20.17 L84.43,23.34 L92.58,25.04 L89.93,26.65 L91.59,28.08 L90.20,30.95 L88.33,31.55 L89.82,33.50 L90.35,36.83 L88.73,37.22 L88.65,39.38 L85.18,43.27 L87.80,44.92 L86.93,46.52 L59.48,40.90 L68.04,16.61 L72.41,17.49 Z"/>
+                          <path class="mode-demo-boundary" d="M73.30,72.06 L89.32,75.37 L82.95,95.51 L80.77,95.56 L78.09,89.79 L78.86,89.03 L76.56,90.25 L77.65,88.13 L74.94,88.76 L74.93,90.46 L70.66,87.84 L67.24,83.94 L61.50,82.42 L64.59,73.63 L72.21,75.27 L73.30,72.06 Z"/>
+                          <path class="mode-demo-boundary mode-demo-boundary--focus" d="M47.02,38.36 L69.79,43.08 L61.80,66.12 L41.70,61.89 L44.01,55.32 L37.05,53.93 L38.22,50.65 L34.75,49.92 L35.88,46.67 L39.38,47.39 L40.35,44.03 L44.78,44.92 L47.02,38.36 Z"/>
+                          <circle class="mode-demo-muni-dot" cx="30.05" cy="56.37" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="82.58" cy="65.5" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="34.88" cy="30.65" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="75.75" cy="32.52" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="75.61" cy="83.18" r="1.35"/>
+                          <circle class="mode-demo-muni-dot mode-demo-muni-dot--target" cx="52.12" cy="52.29" r="1.5"/>
+                          </g>
+                        </svg>
+                        </div>
+                      </div>
+                      <div class="mode-demo-search mode-demo-search--reserve" aria-hidden="true">
+                        <div class="mode-demo-input">
+                          <span class="mode-demo-input-text" aria-hidden="true">&#8203;</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span class="mode-card-title">Dix sur la carte</span>
+                    <span class="mode-card-desc"
+                      >Nommez les 10 municipalités choisies aléatoirement.</span
+                    >
+                  </label>
+                  <label class="mode-card" data-i18n-aria="gameModeNameAria">
+                    <input
+                      type="radio"
+                      name="game-mode"
+                      value="name"
+                      id="game-mode-name"
+                      class="sr-only"
+                    />
+                    <div class="mode-demo mode-demo--name" aria-hidden="true">
+                      <div class="mode-demo-map">
+                        <svg
+                          class="mode-demo-svg"
+                          viewBox="0.7 0.62 98.6 98.6"
+                          preserveAspectRatio="xMidYMid meet"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g class="mode-demo-scene">
+                          <path class="mode-demo-boundary" d="M69.79,43.08 L86.93,46.52 L75.83,52.47 L74.97,57.42 L77.90,61.54 L68.70,67.98 L58.47,71.26 L53.82,71.62 L42.44,69.29 L35.54,65.37 L29.70,63.53 L24.51,64.70 L20.83,63.74 L14.40,57.56 L29.52,48.84 L38.22,50.65 L37.05,53.93 L44.01,55.32 L41.70,61.89 L61.80,66.12 L69.79,43.08 Z"/>
+                          <path class="mode-demo-boundary" d="M23.39,66.69 L23.56,66.60 L23.65,66.60 L23.68,66.67 L23.88,66.74 L24.19,66.73 L24.41,66.65 L24.47,66.71 L24.17,67.55 L23.84,68.29 L23.74,68.68 L23.77,68.98 L23.73,69.55 L23.77,69.68 L23.95,69.98 L23.90,70.02 L23.68,70.01 L23.48,69.90 L22.36,68.93 L21.01,68.01 L20.94,67.91 L20.90,67.62 L21.09,67.49 L21.17,67.26 L21.26,67.27 L21.28,67.44 L21.59,67.35 L21.88,67.17 L21.93,67.15 L22.37,67.01 L22.51,66.99 L22.78,66.87 L22.88,66.79 L23.03,66.79 L23.39,66.69 Z"/>
+                          <path class="mode-demo-boundary" d="M89.83,49.77 L90.55,50.99 L92.53,49.36 L94.42,49.46 L96.30,54.17 L89.32,75.37 L73.30,72.06 L72.21,75.27 L64.59,73.63 L61.50,82.42 L46.28,83.80 L39.61,80.81 L32.28,74.67 L30.40,74.34 L27.63,70.97 L28.19,71.97 L27.44,72.66 L26.59,71.28 L26.87,66.24 L30.59,64.76 L35.88,66.65 L40.34,69.98 L46.32,71.55 L57.02,72.25 L67.74,69.21 L78.04,61.34 L74.97,57.42 L76.44,51.75 L84.24,48.57 L85.26,46.79 L88.89,47.81 L89.83,49.77 Z"/>
+                          <path class="mode-demo-boundary" d="M54.20,4.86 L71.60,4.28 L72.72,6.31 L72.01,8.09 L69.47,8.86 L67.96,12.15 L68.82,13.02 L66.66,13.39 L66.20,15.10 L64.82,15.79 L64.96,18.40 L63.69,20.67 L56.84,22.54 L57.89,22.93 L56.67,23.24 L53.95,27.25 L55.44,28.19 L54.76,29.24 L55.51,32.06 L46.04,38.15 L47.02,38.36 L44.78,44.92 L40.35,44.03 L39.38,47.39 L35.88,46.67 L34.75,49.92 L29.52,48.84 L14.40,57.56 L3.70,46.69 L9.38,43.34 L6.64,40.64 L18.01,34.08 L12.71,28.70 L54.20,4.86 Z"/>
+                          <path class="mode-demo-boundary" d="M72.41,17.49 L85.54,20.17 L84.43,23.34 L92.58,25.04 L89.93,26.65 L91.59,28.08 L90.20,30.95 L88.33,31.55 L89.82,33.50 L90.35,36.83 L88.73,37.22 L88.65,39.38 L85.18,43.27 L87.80,44.92 L86.93,46.52 L59.48,40.90 L68.04,16.61 L72.41,17.49 Z"/>
+                          <path class="mode-demo-boundary" d="M73.30,72.06 L89.32,75.37 L82.95,95.51 L80.77,95.56 L78.09,89.79 L78.86,89.03 L76.56,90.25 L77.65,88.13 L74.94,88.76 L74.93,90.46 L70.66,87.84 L67.24,83.94 L61.50,82.42 L64.59,73.63 L72.21,75.27 L73.30,72.06 Z"/>
+                          <path class="mode-demo-boundary mode-demo-boundary--focus" d="M47.02,38.36 L69.79,43.08 L61.80,66.12 L41.70,61.89 L44.01,55.32 L37.05,53.93 L38.22,50.65 L34.75,49.92 L35.88,46.67 L39.38,47.39 L40.35,44.03 L44.78,44.92 L47.02,38.36 Z"/>
+                          <circle class="mode-demo-muni-dot mode-demo-muni-dot--blink" cx="52.12" cy="52.29" r="1.65"/>
+                          </g>
+                        </svg>
+                      </div>
+                      <div class="mode-demo-search" aria-hidden="true">
+                        <div class="mode-demo-input">
+                          <span class="mode-demo-input-text" data-i18n="modeDemoNameTyping"
+                            >Saint-Augustin</span
+                          >
+                          <span class="mode-demo-input-caret"></span>
+                        </div>
+                      </div>
+                    </div>
+                    <span class="mode-card-title" data-i18n="gameModeNameTitle"
+                      >Nommer la municipalité</span
+                    >
+                    <span class="mode-card-desc" data-i18n="gameModeNameDesc"
+                      >Saisissez le nom de la municipalité qui clignote.</span
+                    >
+                  </label>
+                  <label class="mode-card" data-i18n-aria="gameModeTypemaxAria">
+                    <input
+                      type="radio"
+                      name="game-mode"
+                      value="typemax"
+                      id="game-mode-typemax"
+                      class="sr-only"
+                    />
+                    <div class="mode-demo mode-demo--typemax" aria-hidden="true">
+                      <div class="mode-demo-map">
+                        <svg
+                          class="mode-demo-svg"
+                          viewBox="0.7 0.62 98.6 98.6"
+                          preserveAspectRatio="xMidYMid meet"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g class="mode-demo-scene">
+                          <path class="mode-demo-boundary" d="M69.79,43.08 L86.93,46.52 L75.83,52.47 L74.97,57.42 L77.90,61.54 L68.70,67.98 L58.47,71.26 L53.82,71.62 L42.44,69.29 L35.54,65.37 L29.70,63.53 L24.51,64.70 L20.83,63.74 L14.40,57.56 L29.52,48.84 L38.22,50.65 L37.05,53.93 L44.01,55.32 L41.70,61.89 L61.80,66.12 L69.79,43.08 Z"/>
+                          <path class="mode-demo-boundary" d="M23.39,66.69 L23.56,66.60 L23.65,66.60 L23.68,66.67 L23.88,66.74 L24.19,66.73 L24.41,66.65 L24.47,66.71 L24.17,67.55 L23.84,68.29 L23.74,68.68 L23.77,68.98 L23.73,69.55 L23.77,69.68 L23.95,69.98 L23.90,70.02 L23.68,70.01 L23.48,69.90 L22.36,68.93 L21.01,68.01 L20.94,67.91 L20.90,67.62 L21.09,67.49 L21.17,67.26 L21.26,67.27 L21.28,67.44 L21.59,67.35 L21.88,67.17 L21.93,67.15 L22.37,67.01 L22.51,66.99 L22.78,66.87 L22.88,66.79 L23.03,66.79 L23.39,66.69 Z"/>
+                          <path class="mode-demo-boundary" d="M89.83,49.77 L90.55,50.99 L92.53,49.36 L94.42,49.46 L96.30,54.17 L89.32,75.37 L73.30,72.06 L72.21,75.27 L64.59,73.63 L61.50,82.42 L46.28,83.80 L39.61,80.81 L32.28,74.67 L30.40,74.34 L27.63,70.97 L28.19,71.97 L27.44,72.66 L26.59,71.28 L26.87,66.24 L30.59,64.76 L35.88,66.65 L40.34,69.98 L46.32,71.55 L57.02,72.25 L67.74,69.21 L78.04,61.34 L74.97,57.42 L76.44,51.75 L84.24,48.57 L85.26,46.79 L88.89,47.81 L89.83,49.77 Z"/>
+                          <path class="mode-demo-boundary" d="M54.20,4.86 L71.60,4.28 L72.72,6.31 L72.01,8.09 L69.47,8.86 L67.96,12.15 L68.82,13.02 L66.66,13.39 L66.20,15.10 L64.82,15.79 L64.96,18.40 L63.69,20.67 L56.84,22.54 L57.89,22.93 L56.67,23.24 L53.95,27.25 L55.44,28.19 L54.76,29.24 L55.51,32.06 L46.04,38.15 L47.02,38.36 L44.78,44.92 L40.35,44.03 L39.38,47.39 L35.88,46.67 L34.75,49.92 L29.52,48.84 L14.40,57.56 L3.70,46.69 L9.38,43.34 L6.64,40.64 L18.01,34.08 L12.71,28.70 L54.20,4.86 Z"/>
+                          <path class="mode-demo-boundary" d="M72.41,17.49 L85.54,20.17 L84.43,23.34 L92.58,25.04 L89.93,26.65 L91.59,28.08 L90.20,30.95 L88.33,31.55 L89.82,33.50 L90.35,36.83 L88.73,37.22 L88.65,39.38 L85.18,43.27 L87.80,44.92 L86.93,46.52 L59.48,40.90 L68.04,16.61 L72.41,17.49 Z"/>
+                          <path class="mode-demo-boundary" d="M73.30,72.06 L89.32,75.37 L82.95,95.51 L80.77,95.56 L78.09,89.79 L78.86,89.03 L76.56,90.25 L77.65,88.13 L74.94,88.76 L74.93,90.46 L70.66,87.84 L67.24,83.94 L61.50,82.42 L64.59,73.63 L72.21,75.27 L73.30,72.06 Z"/>
+                          <path class="mode-demo-boundary mode-demo-boundary--focus" d="M47.02,38.36 L69.79,43.08 L61.80,66.12 L41.70,61.89 L44.01,55.32 L37.05,53.93 L38.22,50.65 L34.75,49.92 L35.88,46.67 L39.38,47.39 L40.35,44.03 L44.78,44.92 L47.02,38.36 Z"/>
+                          <circle class="mode-demo-muni-dot" cx="30.05" cy="56.37" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="82.58" cy="65.5" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="34.88" cy="30.65" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="75.75" cy="32.52" r="1.35"/>
+                          <circle class="mode-demo-muni-dot" cx="75.61" cy="83.18" r="1.35"/>
+                          <circle class="mode-demo-muni-dot mode-demo-muni-dot--found" cx="52.12" cy="52.29" r="1.35"/>
+                          </g>
+                        </svg>
+                      </div>
+                      <div class="mode-demo-search" aria-hidden="true">
+                        <div class="mode-demo-input">
+                          <span class="mode-demo-input-text">Chambord…</span>
+                          <span class="mode-demo-input-caret"></span>
+                        </div>
+                      </div>
+                    </div>
+                    <span class="mode-card-title">Nommer un maximum</span>
+                    <span class="mode-card-desc"
+                      >Nommez le plus de municipalités possible.</span
+                    >
+                  </label>
+                  <label class="mode-card" data-i18n-aria="gameModeMiscAria">
+                    <input
+                      type="radio"
+                      name="game-mode"
+                      value="misc"
+                      id="game-mode-misc"
+                      class="sr-only"
+                    />
+                    <div class="mode-demo mode-demo--misc" aria-hidden="true">
+                      <table class="mode-demo-leaderboard">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th></th>
+                            <th>n</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>1</td>
+                            <td>???</td>
+                            <td>10</td>
+                          </tr>
+                          <tr>
+                            <td>2</td>
+                            <td>???</td>
+                            <td>9</td>
+                          </tr>
+                          <tr>
+                            <td>3</td>
+                            <td>???</td>
+                            <td>7</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <span class="mode-card-title" data-i18n="gameModeMiscTitle"
+                      >Quiz divers</span
+                    >
+                    <span class="mode-card-desc" data-i18n="gameModeMiscDesc"
+                      >Tableaux, statistiques et défis sans carte.</span
+                    >
+                  </label>
+                </div>
+                <label class="theme-toggle setup-theme-toggle">
+                  <span class="theme-toggle-label" data-i18n="darkModeLabel">Mode sombre</span>
+                  <input
+                    type="checkbox"
+                    id="theme-dark-toggle"
+                    class="theme-toggle-input sr-only"
+                  />
+                  <span class="theme-toggle-track" aria-hidden="true">
+                    <span class="theme-toggle-thumb"></span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div
+              id="setup-step-options"
+              class="setup-step setup-step-options hidden"
+              hidden
+            >
+              <div class="setup-options-header">
+                <button
+                  type="button"
+                  id="setup-change-mode"
+                  class="btn-text setup-change-mode"
+                  data-i18n="setupChangeMode"
+                >
+                  ← Changer de mode
+                </button>
+                <p id="setup-selected-mode-label" class="setup-selected-mode"></p>
+              </div>
+
+              <div id="setup-prompt" class="setup-prompt" aria-live="polite"></div>
+              <div id="setup-feedback" class="feedback setup-feedback" aria-live="polite"></div>
+
+              <button type="button" id="start-quiz" class="btn-start" disabled data-i18n="startQuiz">
+                Commencer le quiz
+              </button>
+
+            <div class="card card-options">
+              <label class="option-toggle">
+                <input type="checkbox" id="include-indian-reserves" />
+                <span data-i18n="includeReserves"
+                  >Inclure réserves indiennes et villages nordiques</span
+                >
+              </label>
+              <label class="option-toggle">
+                <input type="checkbox" id="only-indian-reserves" />
+                <span data-i18n="onlyReserves"
+                  >Uniquement réserves indiennes et villages nordiques</span
+                >
+              </label>
+            </div>
+
+            <div
+              class="card card-options misc-submode-panel hidden"
+              id="misc-submode-panel"
+              role="group"
+              data-i18n-aria="miscSubmodeAria"
+            >
+              <p class="misc-submode-heading" data-i18n="miscSubmodeHeading">
+                Défi
+              </p>
+              <label class="option-toggle">
+                <input
+                  type="radio"
+                  name="misc-submode"
+                  value="top10-saints"
+                  id="misc-submode-top10-saints"
+                  checked
+                />
+                <span data-i18n="miscSubmodeTop10Saints"
+                  >Top 10 des « Saint / Sainte » les plus fréquents</span
+                >
+              </label>
+              <p class="misc-submode-hint" data-i18n="miscSubmodeTop10SaintsHint">
+                Classement calculé à partir de votre sélection (MRC et
+                réserves). Le premier mot après Saint-, Sainte-, etc. compte
+                (ex. Saint-Jean-sur-Richelieu → Saint-Jean).
+              </p>
+            </div>
+
+            <details
+              class="typemax-name-filter mrc-filter card hidden"
+              id="typemax-name-filter-panel"
+            >
+              <summary class="mrc-filter-summary-toggle">
+                <span data-i18n="typemaxNameFilterTitle"
+                  >Filtrer par début de nom</span
+                >
+                <span
+                  id="typemax-name-filter-summary"
+                  class="mrc-filter-badge"
+                ></span>
+              </summary>
+              <div class="mrc-filter-body">
+                <p class="typemax-name-filter-hint" data-i18n="typemaxNameFilterHint">
+                  Cochez un ou plusieurs préfixes. Sans sélection, toutes les
+                  municipalités de la sélection sont incluses.
+                </p>
+                <div class="mrc-filter-actions">
+                  <button
+                    type="button"
+                    id="typemax-name-filter-clear-all"
+                    class="btn-text"
+                    data-i18n="typemaxNameFilterClearAll"
+                  >
+                    Tout désélectionner
+                  </button>
+                </div>
+                <div
+                  id="typemax-name-filter-list"
+                  class="mrc-checklist"
+                  role="group"
+                  data-i18n-aria="typemaxNameFilterAria"
+                ></div>
+              </div>
+            </details>
+
+            <details class="mrc-filter card" id="mrc-filter-panel">
+              <summary class="mrc-filter-summary-toggle">
+                <span data-i18n="filterMrc">Filtrer par MRC</span>
+                <span id="mrc-filter-summary" class="mrc-filter-badge"></span>
+              </summary>
+              <div class="mrc-filter-body">
+                <input
+                  type="search"
+                  id="mrc-search"
+                  class="mrc-search"
+                  data-i18n-placeholder="mrcSearchPlaceholder"
+                  placeholder="Rechercher une MRC…"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <div class="mrc-filter-actions">
+                  <button
+                    type="button"
+                    id="mrc-select-all"
+                    class="btn-text"
+                    data-i18n="mrcSelectAll"
+                  >
+                    Tout sélectionner
+                  </button>
+                  <span class="mrc-filter-actions-sep" aria-hidden="true">·</span>
+                  <button
+                    type="button"
+                    id="mrc-deselect-all"
+                    class="btn-text"
+                    data-i18n="mrcDeselectAll"
+                  >
+                    Tout désélectionner
+                  </button>
+                </div>
+                <div
+                  id="mrc-checklist"
+                  class="mrc-checklist"
+                  role="group"
+                  data-i18n-aria="mrcFilterAria"
+                  aria-label="Filtrer par MRC"
+                ></div>
+              </div>
+            </details>
+
+            </div>
+          </div>
+        </section>
+
+        <div
+          id="game-bar"
+          class="game-bar hidden"
+          data-i18n-aria="gameBarAria"
+          aria-label="Partie en cours"
+        >
+          <div class="game-bar-center">
+            <p id="game-bar-kicker" class="game-bar-kicker" data-i18n="municipalityToFind">
+              Municipalité à trouver
+            </p>
+            <div id="prompt" class="game-prompt" aria-live="polite"></div>
+            <button
+              type="button"
+              id="locate-center-target"
+              class="btn-name-pass btn-name-center locate-center-target hidden"
+              data-i18n-aria="locateCenterTargetAria"
+            >
+              <span class="btn-name-center-text" data-i18n="nameCenterTarget"
+                >Centrer</span
+              >
+              <kbd class="key-cap" title="Maj gauche" aria-hidden="true">Maj</kbd>
+            </button>
+            <form id="name-guess-form" class="name-guess-form hidden" autocomplete="off">
+              <input
+                type="text"
+                id="name-guess-input"
+                class="name-guess-input"
+                data-i18n-placeholder="nameGuessPlaceholder"
+                placeholder="Nom de la municipalité…"
+                spellcheck="false"
+                autocapitalize="off"
+                enterkeyhint="done"
+              />
+              <button
+                type="button"
+                id="typemax-give-up"
+                class="btn-typemax-give-up hidden"
+                data-i18n="typemaxGiveUp"
+              >
+                Abandonner
+              </button>
+              <button
+                type="button"
+                id="name-center-target"
+                class="btn-name-pass btn-name-center"
+                data-i18n-aria="nameCenterTargetAria"
+              >
+                <span class="btn-name-center-text" data-i18n="nameCenterTarget"
+                  >Centrer</span
+                >
+                <kbd class="key-cap" title="Maj gauche" aria-hidden="true">Maj</kbd>
+              </button>
+              <button
+                type="button"
+                id="name-guess-pass"
+                class="btn-name-pass"
+                data-i18n-aria="nameGuessPassAria"
+              >
+                <span data-i18n="nameGuessPass">Passer</span>
+                <kbd class="key-cap" title="Tab" aria-hidden="true">Tab</kbd>
+              </button>
+              <button
+                type="button"
+                id="name-guess-reveal"
+                class="btn-name-pass btn-name-reveal"
+                data-i18n-aria="nameGuessRevealAria"
+              >
+                <span data-i18n="nameGuessReveal">Révéler</span>
+                <kbd class="key-cap" title="Ctrl" aria-hidden="true">Ctrl</kbd>
+                <kbd class="key-cap" title="Alt" aria-hidden="true">Alt</kbd>
+              </button>
+            </form>
+            <div id="feedback" class="feedback game-feedback" aria-live="assertive"></div>
+          </div>
+          <div class="game-hud">
+            <div
+              id="locate-score"
+              class="quiz-timer locate-score hidden"
+              aria-live="polite"
+              data-i18n-aria="locateScoreAria"
+            >
+              <span class="quiz-timer-label" data-i18n="locateScoreLabel">Points</span>
+              <span id="locate-score-value" class="quiz-timer-value">0</span>
+            </div>
+            <div id="quiz-timer" class="quiz-timer" aria-live="polite">
+              <span class="quiz-timer-label" data-i18n="timeLabel">Temps</span>
+              <span id="quiz-timer-value" class="quiz-timer-value">00:00:00:00</span>
+            </div>
+            <button type="button" id="pause-quiz" class="btn-pause" data-i18n="pause">Pause</button>
+            <button
+              type="button"
+              id="name-progress-toggle"
+              class="btn-name-progress hidden"
+              data-i18n="nameProgressToggle"
+              data-i18n-aria="nameProgressToggleAria"
+              aria-expanded="false"
+              aria-controls="name-progress-sidebar"
+            >
+              Liste
+            </button>
+            <button
+              type="button"
+              id="ten-replay-quiz"
+              class="btn-ten-replay hidden"
+              data-i18n="tenModeReplay"
+              data-i18n-aria="tenModeReplayAria"
+            >
+              Rejouer
+            </button>
+          </div>
+        </div>
+
+        <aside
+          id="name-progress-sidebar"
+          class="name-progress-sidebar"
+          aria-hidden="true"
+          data-i18n-aria="nameProgressSidebarAria"
+        >
+          <div class="name-progress-sidebar-head">
+            <h2 class="name-progress-sidebar-title" data-i18n="nameProgressTitle">
+              Municipalités nommées
+            </h2>
+            <button
+              type="button"
+              id="name-progress-close"
+              class="name-progress-close"
+              data-i18n-aria="nameProgressCloseAria"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+          <p class="name-progress-summary" id="name-progress-summary" aria-live="polite"></p>
+          <div
+            id="name-progress-list"
+            class="name-progress-list"
+            role="list"
+          ></div>
+        </aside>
+      </div>
+    </main>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js"></script>
+    <script src="i18n.js?v=20260722x"></script>
+    <script src="app.js?v=20260722x"></script>
+  </body>
+</html>
