@@ -28,7 +28,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..700;1,14..32,400..700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260722n" />
+    <link rel="stylesheet" href="styles.css?v=20260722ai" />
   </head>
   <body>
     <header class="header">
@@ -70,14 +70,13 @@
           aria-hidden="true"
         >
           <div class="misc-quiz-card card">
-            <p id="misc-quiz-instructions" class="misc-quiz-instructions"></p>
             <table class="misc-leaderboard" aria-labelledby="misc-leaderboard-caption">
               <caption id="misc-leaderboard-caption" class="sr-only"></caption>
-              <thead>
+              <thead id="misc-leaderboard-head">
                 <tr>
                   <th scope="col" data-i18n="miscLeaderboardRank">Rang</th>
-                  <th scope="col" data-i18n="miscLeaderboardSaint">Saint / Sainte</th>
-                  <th scope="col" data-i18n="miscLeaderboardCount">Municipalités</th>
+                  <th scope="col" id="misc-leaderboard-name-col" data-i18n="miscLeaderboardSaint">Saint / Sainte</th>
+                  <th scope="col" id="misc-leaderboard-hint-col" data-i18n="miscLeaderboardCount">Municipalités</th>
                 </tr>
               </thead>
               <tbody id="misc-leaderboard-body"></tbody>
@@ -315,38 +314,31 @@
                       class="sr-only"
                     />
                     <div class="mode-demo mode-demo--misc" aria-hidden="true">
-                      <table class="mode-demo-leaderboard">
+                      <table class="mode-demo-leaderboard mode-demo-leaderboard--two-col">
                         <thead>
                           <tr>
                             <th>#</th>
                             <th></th>
-                            <th>n</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr>
                             <td>1</td>
                             <td>???</td>
-                            <td>10</td>
                           </tr>
                           <tr>
                             <td>2</td>
                             <td>???</td>
-                            <td>9</td>
                           </tr>
                           <tr>
                             <td>3</td>
                             <td>???</td>
-                            <td>7</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
                     <span class="mode-card-title" data-i18n="gameModeMiscTitle"
                       >Quiz divers</span
-                    >
-                    <span class="mode-card-desc" data-i18n="gameModeMiscDesc"
-                      >Tableaux, statistiques et défis sans carte.</span
                     >
                   </label>
                 </div>
@@ -384,25 +376,6 @@
               <div id="setup-prompt" class="setup-prompt" aria-live="polite"></div>
               <div id="setup-feedback" class="feedback setup-feedback" aria-live="polite"></div>
 
-              <button type="button" id="start-quiz" class="btn-start" disabled data-i18n="startQuiz">
-                Commencer le quiz
-              </button>
-
-            <div class="card card-options">
-              <label class="option-toggle">
-                <input type="checkbox" id="include-indian-reserves" />
-                <span data-i18n="includeReserves"
-                  >Inclure réserves indiennes et villages nordiques</span
-                >
-              </label>
-              <label class="option-toggle">
-                <input type="checkbox" id="only-indian-reserves" />
-                <span data-i18n="onlyReserves"
-                  >Uniquement réserves indiennes et villages nordiques</span
-                >
-              </label>
-            </div>
-
             <div
               class="card card-options misc-submode-panel hidden"
               id="misc-submode-panel"
@@ -424,11 +397,32 @@
                   >Top 10 des « Saint / Sainte » les plus fréquents</span
                 >
               </label>
-              <p class="misc-submode-hint" data-i18n="miscSubmodeTop10SaintsHint">
-                Classement calculé à partir de votre sélection (MRC et
-                réserves). Le premier mot après Saint-, Sainte-, etc. compte
-                (ex. Saint-Jean-sur-Richelieu → Saint-Jean).
-              </p>
+              <label class="option-toggle">
+                <input
+                  type="radio"
+                  name="misc-submode"
+                  value="top10-largest-area"
+                  id="misc-submode-top10-largest-area"
+                />
+                <span data-i18n="miscSubmodeTop10LargestArea"
+                  >Top 10 des plus grandes municipalités (km²)</span
+                >
+              </label>
+            </div>
+
+            <div class="card card-options" id="setup-reserve-options">
+              <label class="option-toggle">
+                <input type="checkbox" id="include-indian-reserves" />
+                <span data-i18n="includeReserves"
+                  >Inclure réserves indiennes et villages nordiques</span
+                >
+              </label>
+              <label class="option-toggle">
+                <input type="checkbox" id="only-indian-reserves" />
+                <span data-i18n="onlyReserves"
+                  >Uniquement réserves indiennes et villages nordiques</span
+                >
+              </label>
             </div>
 
             <details
@@ -512,6 +506,10 @@
               </div>
             </details>
 
+              <button type="button" id="start-quiz" class="btn-start" disabled data-i18n="startQuiz">
+                Commencer le quiz
+              </button>
+
             </div>
           </div>
         </section>
@@ -543,6 +541,13 @@
                 type="text"
                 id="name-guess-input"
                 class="name-guess-input"
+                name="quiz-guess"
+                autocomplete="off"
+                autocorrect="off"
+                aria-autocomplete="none"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
                 data-i18n-placeholder="nameGuessPlaceholder"
                 placeholder="Nom de la municipalité…"
                 spellcheck="false"
@@ -663,7 +668,7 @@
       crossorigin=""
     ></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js"></script>
-    <script src="i18n.js?v=20260722x"></script>
-    <script src="app.js?v=20260722x"></script>
+    <script src="i18n.js?v=20260722ak"></script>
+    <script src="app.js?v=20260722ak"></script>
   </body>
 </html>

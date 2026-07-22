@@ -1,0 +1,12 @@
+﻿Skip merge ['46040'] into 46035 (already applied)
+Skip merge ['68015'] into 68010 (already applied)
+Skip merge ['50030'] into 50035 (already applied)
+Skip merge ['49080'] into 49075 (already applied)
+Skip merge ['31020'] into 31015 (already applied)
+Skip merge ['42060'] into 42055 (already applied)
+Skip merge ['45055'] into 45043 (already applied)
+Skip merge ['89045'] into 89040 (already applied)
+Skip merge ['99808'] into 99040 (already applied)
+Skip merge ['99818'] into 99820 (already applied)
+Wrote C:\Users\admin\quebec-municipalities-quiz\public\data\municipalities.geojson (1160 -> 1160 features)
+Wrote C:\Users\admin\quebec-municipalities-quiz\public\data\municipalities-list.json

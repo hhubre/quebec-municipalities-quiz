@@ -109,17 +109,26 @@ const MESSAGES = {
       "Top 10 des « Saint / Sainte » les plus fréquents",
     miscSubmodeTop10SaintsHint:
       "Classement calculé à partir de votre sélection (MRC et réserves). Le premier mot après Saint-, Sainte-, etc. compte (ex. Saint-Jean-sur-Richelieu → Saint-Jean).",
+    miscSubmodeTop10LargestArea:
+      "Top 10 des plus grandes municipalités (km²)",
+    miscSubmodeTop10LargestAreaHint:
+      "Superficie calculée à partir des limites officielles (fusion incluse, ex. Senneterre). Ajustez les MRC et les réserves ci-dessous.",
     miscSetupPrompt:
       "Choisissez le défi et les filtres, puis lancez le quiz.",
     miscNeedTenSaints:
       "Il faut au moins <strong>10 formes Saint/Sainte distinctes</strong> dans votre sélection ({n} trouvées).",
+    miscNeedTenArea:
+      "Il faut au moins <strong>10 municipalités</strong> avec une superficie dans votre sélection ({n} disponibles).",
     miscModeKicker: "Nommez les entrées du classement",
     miscGuessPlaceholder: "Saint-Jean, Sainte-Anne…",
+    miscGuessPlaceholderArea: "Senneterre, Baie-James…",
     miscQuizInstructions:
-      "Remplissez le tableau : chaque ligne est un prénom (Saint-X ou Sainte-X) partagé par le nombre de municipalités indiqué.",
+      "Remplissez le tableau : chaque ligne est un prénom (Saint-X ou Sainte-X) partagé par au moins cinq municipalités au Québec.",
     miscLeaderboardRank: "Rang",
     miscLeaderboardSaint: "Saint / Sainte",
+    miscLeaderboardMunicipality: "Municipalité",
     miscLeaderboardCount: "Municipalités",
+    miscLeaderboardArea: "Superficie",
     miscLeaderboardEmpty: "???",
     miscProgress: "{found} / {total} trouvés",
     miscAlreadyFound: "Déjà dans le tableau.",
@@ -268,16 +277,24 @@ const MESSAGES = {
     miscSubmodeTop10Saints: "Top 10 most common Saint / Sainte names",
     miscSubmodeTop10SaintsHint:
       "Rankings use your current selection (RCM and reserves). Only the first word after Saint-, Sainte-, etc. counts (e.g. Saint-Jean-sur-Richelieu → Saint-Jean).",
+    miscSubmodeTop10LargestArea: "Top 10 largest municipalities (km²)",
+    miscSubmodeTop10LargestAreaHint:
+      "Area from official boundaries (merged units included, e.g. Senneterre). Adjust RCMs and reserves below.",
     miscSetupPrompt: "Pick a challenge and filters, then start the quiz.",
     miscNeedTenSaints:
       "You need at least <strong>10 distinct Saint/Sainte forms</strong> in your selection ({n} found).",
+    miscNeedTenArea:
+      "You need at least <strong>10 municipalities</strong> with area data in your selection ({n} available).",
     miscModeKicker: "Name the entries on the leaderboard",
     miscGuessPlaceholder: "Saint-Jean, Sainte-Anne…",
+    miscGuessPlaceholderArea: "Senneterre, Baie-James…",
     miscQuizInstructions:
-      "Fill in the board: each row is a Saint-X or Sainte-X shared by the number of municipalities shown.",
+      "Fill in the board: each row is a Saint-X or Sainte-X shared by at least five municipalities in Quebec.",
     miscLeaderboardRank: "Rank",
     miscLeaderboardSaint: "Saint / Sainte",
+    miscLeaderboardMunicipality: "Municipality",
     miscLeaderboardCount: "Municipalities",
+    miscLeaderboardArea: "Area",
     miscLeaderboardEmpty: "???",
     miscProgress: "{found} / {total} found",
     miscAlreadyFound: "Already on the board.",

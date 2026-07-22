@@ -6,13 +6,17 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
+from pyproj import Geod
 from shapely.geometry import mapping, shape
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 
+_GEOD = Geod(ellps="WGS84")
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "public" / "data" / "municipalities.geojson"
 LIST_OUT = ROOT / "public" / "data" / "municipalities-list.json"
+LAND_AREA_BY_CODE_PATH = ROOT / "public" / "data" / "municipality-land-area-by-code.json"
 
 # keep = fiche conservée ; merge = fiches absorbées puis retirées
 MERGE_GROUPS = [
@@ -175,10 +179,61 @@ def apply_to_collection(features: list[dict]) -> list[dict]:
     return [f for f in features if str(f["properties"]["code"]) not in remove_codes]
 
 
+def geometry_area_km2(geom_dict: dict) -> float:
+    sh = shape(geom_dict)
+    if not sh.is_valid:
+        sh = make_valid(sh)
+    area_m2, _ = _GEOD.geometry_area_perimeter(sh)
+    return abs(area_m2) / 1_000_000
+
+
+def load_land_area_by_code() -> dict[str, float]:
+    if not LAND_AREA_BY_CODE_PATH.is_file():
+        raise FileNotFoundError(
+            f"Missing {LAND_AREA_BY_CODE_PATH.name}. "
+            "Run: py scripts/fetch_municipality_land_areas.py"
+        )
+    raw = json.loads(LAND_AREA_BY_CODE_PATH.read_text(encoding="utf-8"))
+    return {str(k): float(v) for k, v in raw.items()}
+
+
+def feature_land_area_km2(feat: dict, land_by_code: dict[str, float]) -> float | None:
+    props = feat.get("properties") or {}
+    code = str(props.get("code") or "")
+    merged_from = props.get("mergedFrom") or []
+    codes = [code, *[str(c) for c in merged_from]]
+    total = 0.0
+    found = False
+    for c in codes:
+        if not c:
+            continue
+        val = land_by_code.get(c)
+        if val is None:
+            continue
+        total += val
+        found = True
+    if found:
+        return total
+    geom = feat.get("geometry")
+    if geom:
+        return geometry_area_km2(geom)
+    return None
+
+
+def apply_area_km2(features: list[dict]) -> None:
+    land_by_code = load_land_area_by_code()
+    for feat in features:
+        km2 = feature_land_area_km2(feat, land_by_code)
+        if km2 is None or km2 <= 0:
+            continue
+        feat["properties"]["areaKm2"] = round(km2, 2)
+
+
 def main() -> None:
     geojson = json.loads(OUT.read_text(encoding="utf-8"))
     before = len(geojson["features"])
     geojson["features"] = apply_to_collection(geojson["features"])
+    apply_area_km2(geojson["features"])
     after = len(geojson["features"])
     OUT.write_text(
         json.dumps(geojson, ensure_ascii=False, separators=(",", ":")),

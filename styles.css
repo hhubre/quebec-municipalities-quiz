@@ -144,7 +144,7 @@ body {
 }
 
 #setup-inner.setup-inner--mode-step {
-  max-width: min(960px, 100%);
+  max-width: min(1320px, 100%);
   padding-top: clamp(4.5rem, 14vh, 9rem);
   padding-bottom: 2rem;
 }
@@ -281,8 +281,20 @@ body {
 
 @media (min-width: 1180px) {
   .mode-card-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.1rem;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.95rem;
+  }
+
+  .mode-card-grid .mode-card {
+    padding: 0.85rem 0.75rem 0.95rem;
+  }
+
+  .mode-card-grid .mode-card-title {
+    font-size: 0.92rem;
+  }
+
+  .mode-card-grid .mode-card-desc {
+    font-size: 0.78rem;
   }
 }
 
@@ -1066,6 +1078,13 @@ body.game-mode-name .btn-name-pass {
   font-size: 1rem;
 }
 
+.name-guess-input::-webkit-contacts-auto-fill-button,
+.name-guess-input::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+}
+
 .name-guess-input:focus {
   outline: 2px solid var(--accent-soft);
   border-color: var(--brand);
@@ -1334,6 +1353,14 @@ html[data-theme="dark"] .btn-typemax-give-up {
   display: none;
 }
 
+#mrc-filter-panel.hidden {
+  display: none;
+}
+
+#setup-reserve-options.hidden {
+  display: none;
+}
+
 .misc-submode-panel.hidden {
   display: none;
 }
@@ -1350,6 +1377,10 @@ html[data-theme="dark"] .btn-typemax-give-up {
   font-size: 0.78rem;
   line-height: 1.45;
   color: var(--muted);
+}
+
+.misc-submode-hint.hidden {
+  display: none;
 }
 
 .mode-demo--misc {
@@ -1387,7 +1418,7 @@ html[data-theme="dark"] .btn-typemax-give-up {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 5.25rem 1rem 2rem;
+  padding: 1rem;
   overflow: auto;
   pointer-events: none;
   background: linear-gradient(
@@ -1397,20 +1428,26 @@ html[data-theme="dark"] .btn-typemax-give-up {
   );
 }
 
+body.game-mode-misc.game-active .misc-quiz-overlay {
+  /* Clear the game bar (kicker + guess field + feedback) */
+  padding-top: 11.5rem;
+  padding-bottom: 1.5rem;
+}
+
+@media (max-width: 840px) {
+  body.game-mode-misc.game-active .misc-quiz-overlay {
+    padding-top: 15rem;
+  }
+}
+
 .misc-quiz-overlay:not(.hidden) {
   pointer-events: auto;
 }
 
 .misc-quiz-card {
-  width: min(420px, 100%);
+  width: min(500px, 100%);
   padding: 1rem 1.1rem 1.15rem;
-}
-
-.misc-quiz-instructions {
-  margin: 0 0 0.85rem;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  color: var(--muted);
+  margin-top: 0;
 }
 
 .misc-leaderboard {
@@ -1436,7 +1473,9 @@ html[data-theme="dark"] .btn-typemax-give-up {
 
 .misc-leaderboard th:last-child,
 .misc-leaderboard td:last-child {
-  width: 5.5rem;
+  min-width: 8.75rem;
+  width: 8.75rem;
+  white-space: nowrap;
   text-align: center;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
@@ -1450,6 +1489,21 @@ html[data-theme="dark"] .btn-typemax-give-up {
 .misc-leaderboard-row--revealed td.misc-leaderboard-name {
   color: var(--brand-dark);
   font-weight: 600;
+}
+
+.misc-leaderboard-row--missed td {
+  background: color-mix(in srgb, var(--error) 18%, var(--surface));
+  color: var(--error);
+}
+
+.misc-leaderboard-row--missed td.misc-leaderboard-name {
+  color: var(--error);
+  font-weight: 700;
+  font-style: normal;
+}
+
+body.game-mode-misc #quiz-timer {
+  display: none;
 }
 
 body.game-mode-misc.game-active .leaflet-container {

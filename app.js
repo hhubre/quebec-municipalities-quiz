@@ -89,7 +89,6 @@ const locateCenterTargetEl = document.getElementById("locate-center-target");
 const typemaxGiveUpEl = document.getElementById("typemax-give-up");
 const miscQuizOverlayEl = document.getElementById("misc-quiz-overlay");
 const miscLeaderboardBodyEl = document.getElementById("misc-leaderboard-body");
-const miscQuizInstructionsEl = document.getElementById("misc-quiz-instructions");
 const miscSubmodePanelEl = document.getElementById("misc-submode-panel");
 
 const NAME_MODE_CENTER_MIN_ZOOM = 7;
@@ -100,7 +99,9 @@ const GAME_MODE_TEN = "ten";
 const GAME_MODE_TYPEMAX = "typemax";
 const GAME_MODE_MISC = "misc";
 const MISC_SUBMODE_TOP10_SAINTS = "top10-saints";
+const MISC_SUBMODE_TOP10_LARGEST_AREA = "top10-largest-area";
 const MISC_SAINT_TOP_N = 10;
+const MISC_SAINT_MIN_OCCURRENCES = 5;
 const TEN_MODE_COUNT = 10;
 /** @type {"locate" | "name" | "ten" | "typemax" | "misc"} */
 let gameMode = GAME_MODE_LOCATE;
@@ -111,9 +112,10 @@ let nameModeQuizTotal = 0;
 let nameModeNamedCorrectCount = 0;
 /** @type {GeoJSON.Feature[]} */
 let tenModeFeatures = [];
-/** @type {{ rank: number, label: string, count: number, revealed: boolean, matchKeys: Set<string> }[]} */
-let miscTop10SaintEntries = [];
-let miscSaintCorrectCount = 0;
+/** @type {{ rank: number, label: string, hint: string, revealed: boolean, foundByUser: boolean, missedOnGiveUp: boolean, matchKeys: Set<string> }[]} */
+let miscLeaderboardEntries = [];
+let miscActiveSubmode = MISC_SUBMODE_TOP10_SAINTS;
+let miscCorrectCount = 0;
 let miscGiveUpUsed = false;
 
 /** Sainte→ste, Saint→st, Saints→sts only; Ste and St are not interchangeable. */
@@ -389,6 +391,7 @@ function showSetupModeStep() {
   highlightSelectedModeCard();
   syncTypemaxNameFilterPanelVisibility();
   syncMiscSubmodePanelVisibility();
+  syncMiscSaintsSetupUi();
 }
 
 function showSetupOptionsStep(mode) {
@@ -414,6 +417,7 @@ function showSetupOptionsStep(mode) {
   updateSetupSelectedModeLabel();
   syncTypemaxNameFilterPanelVisibility();
   syncMiscSubmodePanelVisibility();
+  syncMiscSaintsSetupUi();
   if (!setupDataReady) {
     if (setupPromptEl) {
       setupPromptEl.textContent = t("loading");
@@ -592,7 +596,7 @@ function syncGameBarForMode() {
     } else if (gameMode === GAME_MODE_TYPEMAX) {
       nameGuessInputEl.placeholder = t("typemaxGuessPlaceholder");
     } else if (gameMode === GAME_MODE_MISC) {
-      nameGuessInputEl.placeholder = t("miscGuessPlaceholder");
+      nameGuessInputEl.placeholder = t("nameGuessPlaceholder");
     }
   }
   if (nameCenterTargetEl && gameMode === GAME_MODE_NAME) {
@@ -625,6 +629,9 @@ function syncGameBarForMode() {
     typemaxGiveUpEl.disabled = !showGiveUp || quizPaused;
   }
   syncMiscQuizOverlayVisibility();
+  if (quizTimerEl) {
+    quizTimerEl.classList.toggle("hidden", gameMode === GAME_MODE_MISC);
+  }
   if (gameStarted && gameMode === GAME_MODE_MISC) {
     renderMiscLeaderboard();
   }
@@ -857,7 +864,7 @@ function handleNameGuessInput() {
   }
   if (gameMode === GAME_MODE_MISC) {
     setFeedback("", "");
-    tryAcceptMiscSaintGuess();
+    tryAcceptMiscGuess();
     return;
   }
   tryAcceptNameGuess();
@@ -870,7 +877,7 @@ function handleNameGuessFormSubmit(e) {
     return;
   }
   if (gameMode === GAME_MODE_MISC) {
-    tryAcceptMiscSaintGuess({ force: true });
+    tryAcceptMiscGuess({ force: true });
   }
 }
 
@@ -1674,7 +1681,19 @@ function isBasePlayableFeature(feature) {
 }
 
 function featureMrcCode(feature) {
-  return String(feature.properties?.mrcCode ?? "");
+  return normalizeMrcCode(feature.properties?.mrcCode);
+}
+
+function normalizeMrcCode(code) {
+  const raw = String(code ?? "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (/^\d+$/.test(raw)) {
+    const trimmed = raw.replace(/^0+/, "");
+    return trimmed || "0";
+  }
+  return raw;
 }
 
 function foldMunicipalityDisplayName(str) {
@@ -1799,6 +1818,9 @@ const TYPEMAX_NAME_PREFIX_FILTER_DEFS = [
 let enabledTypemaxNamePrefixFilters = new Set();
 
 function shouldApplyTypemaxNamePrefixFilters() {
+  if (getSelectedGameModeFromSetup() === GAME_MODE_MISC) {
+    return false;
+  }
   if (gameStarted) {
     return gameMode === GAME_MODE_TYPEMAX;
   }
@@ -1964,13 +1986,112 @@ function clearAllTypemaxNamePrefixFilters() {
   applyPlayableFilters({ refitBounds: true });
 }
 
+function configureNameGuessInputNoSuggestions() {
+  if (!nameGuessInputEl) {
+    return;
+  }
+  nameGuessInputEl.setAttribute("autocomplete", "off");
+  nameGuessInputEl.setAttribute("autocorrect", "off");
+  nameGuessInputEl.setAttribute("autocapitalize", "off");
+  nameGuessInputEl.setAttribute("spellcheck", "false");
+  nameGuessInputEl.setAttribute("aria-autocomplete", "none");
+  nameGuessInputEl.setAttribute("data-lpignore", "true");
+  nameGuessInputEl.setAttribute("data-1p-ignore", "true");
+  nameGuessInputEl.setAttribute("data-form-type", "other");
+  nameGuessInputEl.removeAttribute("list");
+}
+
+function refreshNameGuessInputAutofillKey() {
+  if (!nameGuessInputEl) {
+    return;
+  }
+  nameGuessInputEl.name = `quiz-guess-${gameMode}-${Date.now()}`;
+}
+
 function getSelectedMiscSubmodeFromSetup() {
   const checked = document.querySelector('input[name="misc-submode"]:checked');
   const value = checked?.value;
+  if (value === MISC_SUBMODE_TOP10_LARGEST_AREA) {
+    return MISC_SUBMODE_TOP10_LARGEST_AREA;
+  }
   if (value === MISC_SUBMODE_TOP10_SAINTS) {
     return MISC_SUBMODE_TOP10_SAINTS;
   }
   return MISC_SUBMODE_TOP10_SAINTS;
+}
+
+function miscSaintsIsBuiltInQuiz() {
+  const inMiscMode =
+    gameStarted && gameMode === GAME_MODE_MISC
+      ? true
+      : getSelectedGameModeFromSetup() === GAME_MODE_MISC;
+  if (!inMiscMode) {
+    return false;
+  }
+  const submode =
+    gameStarted && gameMode === GAME_MODE_MISC
+      ? miscActiveSubmode
+      : getSelectedMiscSubmodeFromSetup();
+  return submode === MISC_SUBMODE_TOP10_SAINTS;
+}
+
+function getMiscSaintsBuiltInFeatures() {
+  return allBaseFeatures.filter((f) => !isIndigenousOrNordicFeature(f));
+}
+
+function syncMrcFilterPanelVisibility() {
+  const panel = document.getElementById("mrc-filter-panel");
+  if (!panel) {
+    return;
+  }
+  panel.classList.toggle("hidden", miscSaintsIsBuiltInQuiz());
+}
+
+function syncSetupReserveOptionsVisibility() {
+  const card = document.getElementById("setup-reserve-options");
+  if (!card) {
+    return;
+  }
+  card.classList.toggle("hidden", miscSaintsIsBuiltInQuiz());
+}
+
+function syncMiscSaintsSetupUi() {
+  syncMrcFilterPanelVisibility();
+  syncSetupReserveOptionsVisibility();
+  if (
+    !gameStarted &&
+    setupDataReady &&
+    getSelectedGameModeFromSetup() === GAME_MODE_MISC &&
+    getSelectedMiscSubmodeFromSetup() === MISC_SUBMODE_TOP10_LARGEST_AREA
+  ) {
+    applyPlayableFilters();
+  }
+}
+
+function featureAreaKm2(feature) {
+  const raw = feature.properties?.areaKm2;
+  if (raw != null && Number.isFinite(Number(raw))) {
+    return Number(raw);
+  }
+  if (feature.geometry && typeof turf !== "undefined" && turf.area) {
+    return turf.area(feature) / 1_000_000;
+  }
+  return 0;
+}
+
+function formatAreaKm2Display(km2) {
+  const n = Number(km2);
+  if (!Number.isFinite(n)) {
+    return "—";
+  }
+  if (n >= 100) {
+    return `${Math.round(n).toLocaleString()} km²`;
+  }
+  return `${n.toLocaleString(undefined, { maximumFractionDigits: 1 })} km²`;
+}
+
+function municipalityDisplayName(nom) {
+  return municipalityPrimaryName(nom);
 }
 
 function syncMiscSubmodePanelVisibility() {
@@ -1981,6 +2102,7 @@ function syncMiscSubmodePanelVisibility() {
     getSelectedGameModeFromSetup() === GAME_MODE_MISC ||
     (gameStarted && gameMode === GAME_MODE_MISC);
   miscSubmodePanelEl.classList.toggle("hidden", !show);
+  syncMiscSaintsSetupUi();
 }
 
 function extractSaintLeaderboardKey(nom) {
@@ -2030,24 +2152,63 @@ function computeTop10SaintEntries(features) {
     const locale = document.documentElement.lang === "en" ? "en" : "fr";
     return a[0].localeCompare(b[0], locale, { sensitivity: "base" });
   });
-  return sorted.slice(0, MISC_SAINT_TOP_N).map(([label, count], index) => ({
+  const qualifying = sorted.filter(
+    ([, count]) => count >= MISC_SAINT_MIN_OCCURRENCES
+  );
+  return qualifying.map(([label, count], index) => ({
     rank: index + 1,
     label,
-    count,
+    hint: String(count),
     revealed: false,
+    foundByUser: false,
+    missedOnGiveUp: false,
     matchKeys: buildSaintEntryMatchKeys(label),
   }));
 }
 
-function countDistinctSaintFormsInFeatures(features) {
-  const keys = new Set();
-  for (const feature of features) {
-    const key = extractSaintLeaderboardKey(feature.properties.nom);
-    if (key) {
-      keys.add(key);
-    }
+function computeTop10LargestAreaEntries(features) {
+  const locale = document.documentElement.lang === "en" ? "en" : "fr";
+  const sorted = features
+    .map((feature) => ({
+      feature,
+      areaKm2: featureAreaKm2(feature),
+      label: municipalityDisplayName(feature.properties.nom),
+    }))
+    .filter((row) => row.areaKm2 > 0)
+    .sort((a, b) => {
+      if (b.areaKm2 !== a.areaKm2) {
+        return b.areaKm2 - a.areaKm2;
+      }
+      return a.label.localeCompare(b.label, locale, { sensitivity: "base" });
+    });
+  return sorted.slice(0, MISC_SAINT_TOP_N).map((row, index) => ({
+    rank: index + 1,
+    label: row.label,
+    hint: formatAreaKm2Display(row.areaKm2),
+    revealed: false,
+    foundByUser: false,
+    missedOnGiveUp: false,
+    matchKeys: new Set(
+      normalizedOfficialNameMatchKeys(
+        row.feature.properties.nom,
+        row.feature.properties.code
+      )
+    ),
+  }));
+}
+
+function buildMiscLeaderboardEntries(features, submode) {
+  if (submode === MISC_SUBMODE_TOP10_LARGEST_AREA) {
+    return computeTop10LargestAreaEntries(features);
   }
-  return keys.size;
+  return computeTop10SaintEntries(getMiscSaintsBuiltInFeatures());
+}
+
+function miscSubmodeReady(features, submode) {
+  if (submode === MISC_SUBMODE_TOP10_LARGEST_AREA) {
+    return buildMiscLeaderboardEntries(features, submode).length >= MISC_SAINT_TOP_N;
+  }
+  return buildMiscLeaderboardEntries(features, submode).length > 0;
 }
 
 function syncMiscQuizOverlayVisibility() {
@@ -2055,21 +2216,46 @@ function syncMiscQuizOverlayVisibility() {
     return;
   }
   const show =
-    gameStarted && gameMode === GAME_MODE_MISC && !quizFinished;
+    gameStarted &&
+    gameMode === GAME_MODE_MISC &&
+    (!quizFinished || miscGiveUpUsed);
   miscQuizOverlayEl.classList.toggle("hidden", !show);
   miscQuizOverlayEl.setAttribute("aria-hidden", show ? "false" : "true");
+}
+
+function updateMiscLeaderboardHead() {
+  const nameCol = document.getElementById("misc-leaderboard-name-col");
+  const hintCol = document.getElementById("misc-leaderboard-hint-col");
+  if (nameCol) {
+    nameCol.textContent =
+      miscActiveSubmode === MISC_SUBMODE_TOP10_LARGEST_AREA
+        ? t("miscLeaderboardMunicipality")
+        : t("miscLeaderboardSaint");
+  }
+  if (hintCol) {
+    hintCol.textContent =
+      miscActiveSubmode === MISC_SUBMODE_TOP10_LARGEST_AREA
+        ? t("miscLeaderboardArea")
+        : t("miscLeaderboardCount");
+  }
 }
 
 function renderMiscLeaderboard() {
   if (!miscLeaderboardBodyEl) {
     return;
   }
+  updateMiscLeaderboardHead();
   miscLeaderboardBodyEl.replaceChildren();
-  for (const entry of miscTop10SaintEntries) {
+  for (const entry of miscLeaderboardEntries) {
     const row = document.createElement("tr");
-    row.className = entry.revealed
-      ? "misc-leaderboard-row--revealed"
-      : "misc-leaderboard-row--pending";
+    if (!entry.revealed) {
+      row.className = "misc-leaderboard-row--pending";
+    } else if (entry.missedOnGiveUp) {
+      row.className =
+        "misc-leaderboard-row--revealed misc-leaderboard-row--missed";
+    } else {
+      row.className = "misc-leaderboard-row--revealed";
+    }
 
     const rankCell = document.createElement("td");
     rankCell.textContent = String(entry.rank);
@@ -2080,27 +2266,24 @@ function renderMiscLeaderboard() {
       ? entry.label
       : t("miscLeaderboardEmpty");
 
-    const countCell = document.createElement("td");
-    countCell.textContent = String(entry.count);
+    const hintCell = document.createElement("td");
+    hintCell.textContent = entry.hint;
 
     row.appendChild(rankCell);
     row.appendChild(nameCell);
-    row.appendChild(countCell);
+    row.appendChild(hintCell);
     miscLeaderboardBodyEl.appendChild(row);
-  }
-  if (miscQuizInstructionsEl) {
-    miscQuizInstructionsEl.textContent = t("miscQuizInstructions");
   }
 }
 
-function findMiscSaintEntryForGuess(guess, { unrevealedOnly = true } = {}) {
+function findMiscLeaderboardEntryForGuess(guess, { unrevealedOnly = true } = {}) {
   const normalizedGuess = normalizeMunicipalityNameForMatch(guess);
   if (!normalizedGuess) {
     return null;
   }
   const pool = unrevealedOnly
-    ? miscTop10SaintEntries.filter((e) => !e.revealed)
-    : miscTop10SaintEntries;
+    ? miscLeaderboardEntries.filter((e) => !e.revealed)
+    : miscLeaderboardEntries;
   const matches = pool.filter((entry) => entry.matchKeys.has(normalizedGuess));
   if (matches.length === 0) {
     return null;
@@ -2114,17 +2297,18 @@ function findMiscSaintEntryForGuess(guess, { unrevealedOnly = true } = {}) {
   return exact ?? matches[0];
 }
 
-function revealMiscSaintEntry(entry) {
+function revealMiscLeaderboardEntry(entry) {
   if (!entry || entry.revealed) {
     return false;
   }
   entry.revealed = true;
-  miscSaintCorrectCount += 1;
+  entry.foundByUser = true;
+  miscCorrectCount += 1;
   renderMiscLeaderboard();
   return true;
 }
 
-function tryAcceptMiscSaintGuess({ force = false } = {}) {
+function tryAcceptMiscGuess({ force = false } = {}) {
   if (
     !gameStarted ||
     quizFinished ||
@@ -2139,27 +2323,29 @@ function tryAcceptMiscSaintGuess({ force = false } = {}) {
   if (!normalizedGuess) {
     return;
   }
-  const already = findMiscSaintEntryForGuess(guess, { unrevealedOnly: false });
+  const already = findMiscLeaderboardEntryForGuess(guess, {
+    unrevealedOnly: false,
+  });
   if (already?.revealed) {
     if (force) {
       setFeedback(t("miscAlreadyFound"), "error");
     }
     return;
   }
-  const match = findMiscSaintEntryForGuess(guess, { unrevealedOnly: true });
+  const match = findMiscLeaderboardEntryForGuess(guess, { unrevealedOnly: true });
   if (!match) {
     if (force) {
       setFeedback(t("miscUnknown"), "error");
     }
     return;
   }
-  revealMiscSaintEntry(match);
+  revealMiscLeaderboardEntry(match);
   setFeedback(t("successPerfect"), "success");
   if (nameGuessInputEl) {
     nameGuessInputEl.value = "";
   }
   updateQuizProgressFeedback();
-  if (miscSaintCorrectCount >= miscTop10SaintEntries.length) {
+  if (miscCorrectCount >= miscLeaderboardEntries.length) {
     clearNextRoundTimer();
     nextRoundTimer = setTimeout(() => {
       nextRoundTimer = null;
@@ -2183,10 +2369,10 @@ function handleMiscGiveUp() {
   miscGiveUpUsed = true;
   quizElapsedFrozenMs = getQuizElapsedMs();
   stopQuizTimerInterval();
-  if (quizTimerValueEl) {
-    quizTimerValueEl.textContent = formatElapsed(quizElapsedFrozenMs);
-  }
-  for (const entry of miscTop10SaintEntries) {
+  for (const entry of miscLeaderboardEntries) {
+    if (!entry.foundByUser) {
+      entry.missedOnGiveUp = true;
+    }
     entry.revealed = true;
   }
   renderMiscLeaderboard();
@@ -2201,8 +2387,11 @@ function handleMiscGiveUp() {
 function initMiscQuizUi() {
   document.querySelectorAll('input[name="misc-submode"]').forEach((radio) => {
     radio.addEventListener("change", () => {
+      syncMiscSaintsSetupUi();
+      applyPlayableFilters({ refitBounds: true });
       if (!gameStarted && setupStepOptionsEl && !setupStepOptionsEl.hidden) {
         showSetupPrompt();
+        updateStartQuizButton();
       }
     });
   });
@@ -2224,6 +2413,9 @@ function initTypemaxNameFilterUi() {
 }
 
 function computePlayableMunicipalities() {
+  if (miscSaintsIsBuiltInQuiz()) {
+    return getMiscSaintsBuiltInFeatures();
+  }
   return allBaseFeatures.filter((f) => {
     const indigenous = isIndigenousOrNordicFeature(f);
     if (onlyIndianReserves) {
@@ -2276,6 +2468,17 @@ function buildMrcCatalog(features) {
     .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
 }
 
+function normalizeDisabledMrcPref(codes, allCodes) {
+  const normalized = new Set();
+  for (const code of codes) {
+    const n = normalizeMrcCode(code);
+    if (n && allCodes.has(n)) {
+      normalized.add(n);
+    }
+  }
+  return normalized;
+}
+
 function loadDisabledMrcPref(allCodes) {
   try {
     const raw = localStorage.getItem(DISABLED_MRC_PREF_KEY);
@@ -2286,7 +2489,7 @@ function loadDisabledMrcPref(allCodes) {
     if (!Array.isArray(parsed)) {
       return new Set();
     }
-    return new Set(parsed.filter((c) => allCodes.has(c)));
+    return normalizeDisabledMrcPref(parsed, allCodes);
   } catch {
     return new Set();
   }
@@ -2351,6 +2554,19 @@ function renderMrcChecklist() {
   }
 }
 
+function setAllMrcEnabled(enabled) {
+  for (const mrc of mrcCatalog) {
+    if (enabled) {
+      disabledMrcCodes.delete(mrc.code);
+    } else {
+      disabledMrcCodes.add(mrc.code);
+    }
+  }
+  saveDisabledMrcPref();
+  renderMrcChecklist();
+  applyPlayableFilters();
+}
+
 function setMrcEnabledForVisible(checked) {
   for (const mrc of mrcCatalog) {
     if (!mrcMatchesSearch(mrc)) {
@@ -2379,11 +2595,11 @@ function initMrcFilterUi() {
   });
 
   document.getElementById("mrc-select-all")?.addEventListener("click", () => {
-    setMrcEnabledForVisible(true);
+    setAllMrcEnabled(true);
   });
 
   document.getElementById("mrc-deselect-all")?.addEventListener("click", () => {
-    setMrcEnabledForVisible(false);
+    setAllMrcEnabled(false);
   });
 
   renderMrcChecklist();
@@ -2697,13 +2913,13 @@ function formatQuizFinishedFeedback(elapsedMs) {
   if (gameMode === GAME_MODE_MISC) {
     if (miscGiveUpUsed) {
       return t("miscQuizScoreGiveUp", {
-        found: miscSaintCorrectCount,
+        found: miscCorrectCount,
         total: nameModeQuizTotal,
         time,
       });
     }
     return t("miscQuizScore", {
-      correct: miscSaintCorrectCount,
+      correct: miscCorrectCount,
       total: nameModeQuizTotal,
       time,
     });
@@ -2750,13 +2966,7 @@ function updateQuizProgressFeedback() {
     return;
   }
   if (gameMode === GAME_MODE_MISC) {
-    setFeedback(
-      t("miscProgress", {
-        found: miscSaintCorrectCount,
-        total: nameModeQuizTotal || MISC_SAINT_TOP_N,
-      }),
-      ""
-    );
+    setFeedback("", "");
     return;
   }
   if (gameMode === GAME_MODE_TEN) {
@@ -2793,12 +3003,14 @@ function finishQuiz() {
   } else {
     promptEl.innerHTML = `<strong>${t("quizFinished")}</strong>`;
   }
+  if (gameMode === GAME_MODE_MISC) {
+    setFeedback("", "");
+    syncGameBarForMode();
+    return;
+  }
   setFeedback(
     formatQuizFinishedFeedback(elapsed),
-    (gameMode === GAME_MODE_TYPEMAX && typemaxGiveUpUsed) ||
-      (gameMode === GAME_MODE_MISC && miscGiveUpUsed)
-      ? "success-red"
-      : "success"
+    gameMode === GAME_MODE_TYPEMAX && typemaxGiveUpUsed ? "success-red" : "success"
   );
   syncGameBarForMode();
 }
@@ -2855,11 +3067,11 @@ function updateStartQuizButton() {
   const setupMode = getSelectedGameModeFromSetup();
   const tooFewForTen =
     setupMode === GAME_MODE_TEN && municipalities.length < TEN_MODE_COUNT;
-  const tooFewForMiscSaints =
+  const tooFewForMisc =
     setupMode === GAME_MODE_MISC &&
-    countDistinctSaintFormsInFeatures(municipalities) < MISC_SAINT_TOP_N;
+    !miscSubmodeReady(municipalities, getSelectedMiscSubmodeFromSetup());
   startQuizEl.disabled =
-    municipalities.length === 0 || tooFewForTen || tooFewForMiscSaints;
+    municipalities.length === 0 || tooFewForTen || tooFewForMisc;
 }
 
 function showSetupPrompt() {
@@ -2885,19 +3097,28 @@ function showSetupPrompt() {
     return;
   }
   if (getSelectedGameModeFromSetup() === GAME_MODE_MISC) {
-    const saintForms = countDistinctSaintFormsInFeatures(municipalities);
-    setupPromptEl.innerHTML = t("miscSetupPrompt");
-    if (saintForms < MISC_SAINT_TOP_N) {
-      setupPromptEl.innerHTML = t("miscNeedTenSaints", { n: saintForms });
-      setSetupFeedback(
-        t("setupMunicipalityCount", { n: municipalities.length }),
-        "error"
-      );
+    const submode = getSelectedMiscSubmodeFromSetup();
+    if (submode === MISC_SUBMODE_TOP10_SAINTS) {
+      setupPromptEl.textContent = "";
+      setSetupFeedback("", "");
     } else {
-      setSetupFeedback(
-        t("setupMunicipalityCount", { n: municipalities.length }),
-        ""
-      );
+      setupPromptEl.innerHTML = t("miscSetupPrompt");
+      if (!miscSubmodeReady(municipalities, submode)) {
+        const withArea = buildMiscLeaderboardEntries(
+          municipalities,
+          MISC_SUBMODE_TOP10_LARGEST_AREA
+        ).length;
+        setupPromptEl.innerHTML = t("miscNeedTenArea", { n: withArea });
+        setSetupFeedback(
+          t("setupMunicipalityCount", { n: municipalities.length }),
+          "error"
+        );
+      } else {
+        setSetupFeedback(
+          t("setupMunicipalityCount", { n: municipalities.length }),
+          ""
+        );
+      }
     }
     updateStartQuizButton();
     return;
@@ -2920,7 +3141,7 @@ function startQuiz() {
   }
   if (
     setupMode === GAME_MODE_MISC &&
-    computeTop10SaintEntries(municipalities).length < MISC_SAINT_TOP_N
+    !miscSubmodeReady(municipalities, getSelectedMiscSubmodeFromSetup())
   ) {
     return;
   }
@@ -2957,11 +3178,12 @@ function startQuiz() {
   nameProgressSlots = [];
   typemaxGiveUpUsed = false;
   miscGiveUpUsed = false;
-  miscSaintCorrectCount = 0;
-  miscTop10SaintEntries = [];
+  miscCorrectCount = 0;
+  miscLeaderboardEntries = [];
   nameModeLeftShiftAlonePending = false;
   if (nameGuessInputEl) {
     nameGuessInputEl.disabled = false;
+    refreshNameGuessInputAutofillKey();
   }
   updateStartQuizButton();
   activateGameLayout();
@@ -2989,8 +3211,12 @@ function startQuiz() {
     return;
   }
   if (gameMode === GAME_MODE_MISC) {
-    miscTop10SaintEntries = computeTop10SaintEntries(municipalities);
-    nameModeQuizTotal = miscTop10SaintEntries.length;
+    miscActiveSubmode = getSelectedMiscSubmodeFromSetup();
+    miscLeaderboardEntries = buildMiscLeaderboardEntries(
+      municipalities,
+      miscActiveSubmode
+    );
+    nameModeQuizTotal = miscLeaderboardEntries.length;
     nameModeNamedCorrectCount = 0;
     updateQuizProgressFeedback();
     syncGameBarForMode();
@@ -4098,6 +4324,7 @@ async function loadData() {
   initMrcFilterUi();
   initTypemaxNameFilterUi();
   initMiscQuizUi();
+  configureNameGuessInputNoSuggestions();
   municipalities = computePlayableMunicipalities();
   buildMapLayers();
   updateMrcFilterSummary();
@@ -4173,6 +4400,7 @@ function onLanguageChanged() {
     updateSetupSelectedModeLabel();
     syncTypemaxNameFilterPanelVisibility();
     syncMiscSubmodePanelVisibility();
+    syncMiscSaintsSetupUi();
     showSetupPrompt();
     return;
   }
@@ -4182,9 +4410,13 @@ function onLanguageChanged() {
   syncPauseControlLabels();
   syncGameBarForMode();
   if (quizFinished) {
-    const elapsed = getQuizElapsedMs();
     promptEl.innerHTML = `<strong>${t("quizFinished")}</strong>`;
-    setFeedback(formatQuizFinishedFeedback(elapsed), "success");
+    if (gameMode === GAME_MODE_MISC) {
+      setFeedback("", "");
+    } else {
+      const elapsed = getQuizElapsedMs();
+      setFeedback(formatQuizFinishedFeedback(elapsed), "success");
+    }
     return;
   }
   if (target) {
