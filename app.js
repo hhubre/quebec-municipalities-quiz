@@ -62,8 +62,10 @@ const setupStepOptionsEl = document.getElementById("setup-step-options");
 const setupLoadErrorEl = document.getElementById("setup-load-error");
 const setupModePickerEl = document.getElementById("setup-mode-picker");
 const setupChangeModeEl = document.getElementById("setup-change-mode");
+const headerExitToModesEl = document.getElementById("header-exit-to-modes");
 const setupSelectedModeLabelEl = document.getElementById("setup-selected-mode-label");
 const gameBarEl = document.getElementById("game-bar");
+const gameChromeEl = document.getElementById("game-chrome");
 const includeIndianReservesEl = document.getElementById("include-indian-reserves");
 const onlyIndianReservesEl = document.getElementById("only-indian-reserves");
 const startQuizEl = document.getElementById("start-quiz");
@@ -392,6 +394,82 @@ function showSetupModeStep() {
   syncTypemaxNameFilterPanelVisibility();
   syncMiscSubmodePanelVisibility();
   syncMiscSaintsSetupUi();
+  updateHeaderExitButtonVisibility();
+}
+
+function updateHeaderExitButtonVisibility() {
+  if (!headerExitToModesEl) {
+    return;
+  }
+  const onSetupOptions =
+    setupStepOptionsEl && !setupStepOptionsEl.hidden;
+  const show = gameStarted || onSetupOptions;
+  headerExitToModesEl.classList.toggle("hidden", !show);
+}
+
+function exitToGameModeSelection() {
+  if (gameStarted) {
+    clearNextRoundTimer();
+    stopBlink();
+    disableFailedRoundClickRecovery();
+    clearWrongReveals();
+    clearCorrectNameLabel();
+    stopQuizTimer();
+    setQuizPaused(false);
+    gameStarted = false;
+    quizFinished = false;
+    target = null;
+    queuedTarget = null;
+    solved = false;
+    failedRound = false;
+    failedAnswerConfirmed = false;
+    answerLabelActive = false;
+    solvedStyles = null;
+    strikes = 0;
+    locateModeScore = 0;
+    completedCodes.clear();
+    completedMarkerStyles.clear();
+    discoveredZoneStyles.clear();
+    namedCorrectCodes.clear();
+    namedRevealedCodes.clear();
+    typemaxMissedCodes.clear();
+    nameProgressSlots = [];
+    typemaxGiveUpUsed = false;
+    miscGiveUpUsed = false;
+    miscCorrectCount = 0;
+    miscLeaderboardEntries = [];
+    tenModeFeatures = [];
+    nameModeLeftShiftAlonePending = false;
+    if (nameGuessInputEl) {
+      nameGuessInputEl.value = "";
+      nameGuessInputEl.disabled = false;
+    }
+    if (promptEl) {
+      promptEl.textContent = "";
+    }
+    setFeedback("", "");
+    setNameProgressSidebarOpen(false);
+    if (highlightLayer) {
+      map.removeLayer(highlightLayer);
+      highlightLayer = null;
+    }
+    document.body.classList.remove("game-active");
+    gameChromeEl?.classList.add("hidden");
+    resetMarkerStyles();
+    buildMapLayers();
+    if (mapBoundaryFeaturePool.length > 0) {
+      fitMapToBoundaryFeaturePool([24, 24]);
+    }
+    syncGameBarForMode();
+    updateStartQuizButton();
+  }
+  showSetupModeStep();
+  if (setupDataReady) {
+    applyPlayableFilters({ refitBounds: true });
+  } else {
+    updateHeaderExitButtonVisibility();
+  }
+  requestAnimationFrame(() => map.invalidateSize(true));
 }
 
 function showSetupOptionsStep(mode) {
@@ -427,6 +505,7 @@ function showSetupOptionsStep(mode) {
     return;
   }
   applyPlayableFilters({ refitBounds: true });
+  updateHeaderExitButtonVisibility();
 }
 
 function markSetupDataReady() {
@@ -441,6 +520,7 @@ function markSetupDataReady() {
     showSetupPrompt();
   }
   updateModeCardStaticLabels();
+  updateHeaderExitButtonVisibility();
 }
 
 function updateModeCardStaticLabels() {
@@ -512,9 +592,10 @@ function bindSetupModePicker() {
   });
 
   setupChangeModeEl?.addEventListener("click", () => {
-    if (!gameStarted) {
-      showSetupModeStep();
-    }
+    exitToGameModeSelection();
+  });
+  headerExitToModesEl?.addEventListener("click", () => {
+    exitToGameModeSelection();
   });
 }
 
@@ -608,7 +689,8 @@ function syncGameBarForMode() {
       gameStarted &&
       !quizFinished &&
       Boolean(target) &&
-      !solved;
+      !solved &&
+      failedRound;
     locateCenterTargetEl.classList.toggle("hidden", !showLocateCenter);
     locateCenterTargetEl.disabled = !showLocateCenter || quizPaused;
     if (showLocateCenter) {
@@ -885,7 +967,10 @@ function canCenterOnActiveTarget() {
   if (!gameStarted || quizFinished || quizPaused || !target || solved) {
     return false;
   }
-  return gameMode === GAME_MODE_NAME || gameMode === GAME_MODE_LOCATE;
+  if (gameMode === GAME_MODE_LOCATE) {
+    return failedRound;
+  }
+  return gameMode === GAME_MODE_NAME;
 }
 
 function canCenterOnBlinkingTarget() {
@@ -1040,7 +1125,7 @@ const vectorPathOpts = {
 };
 
 const map = L.map("map", {
-  zoomControl: true,
+  zoomControl: false,
   minZoom: 4,
   maxZoom: 12,
   preferCanvas: true,
@@ -2718,7 +2803,8 @@ function toggleQuizPause() {
 
 function activateGameLayout() {
   document.body.classList.add("game-active");
-  gameBarEl?.classList.remove("hidden");
+  gameChromeEl?.classList.remove("hidden");
+  updateHeaderExitButtonVisibility();
   requestAnimationFrame(() => {
     map.invalidateSize(true);
     setTimeout(() => map.invalidateSize(true), 150);
@@ -4126,6 +4212,7 @@ function failRound() {
   startBlinkTarget();
   setFeedback("", "");
   enableFailedRoundClickRecovery();
+  syncGameBarForMode();
 }
 
 function pickTarget() {

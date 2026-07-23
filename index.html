@@ -28,11 +28,21 @@
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..700;1,14..32,400..700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260722ai" />
+    <link rel="stylesheet" href="styles.css?v=20260722bk" />
   </head>
   <body>
     <header class="header">
       <div class="header-inner">
+        <button
+          type="button"
+          id="header-exit-to-modes"
+          class="btn-header-back hidden"
+          data-i18n="headerBackToModes"
+          data-i18n-aria="headerBackToModesAria"
+        >
+          ← Modes
+        </button>
+        <div class="header-inner-end">
         <details class="creator-note creator-note--header">
           <summary class="creator-note-summary" data-i18n="creatorWordsTitle">
             Mots du créateur
@@ -46,6 +56,7 @@
           <button type="button" id="lang-en" class="lang-btn" data-lang="en">
             EN
           </button>
+        </div>
         </div>
       </div>
     </header>
@@ -93,7 +104,7 @@
           <div class="setup-inner setup-inner--mode-step" id="setup-inner">
             <div id="setup-step-mode" class="setup-step">
               <h1 class="setup-mode-title" data-i18n="pickGameModeTitle">
-                Choisir le mode de jeu
+                Modes de jeu
               </h1>
               <p
                 id="setup-load-error"
@@ -300,7 +311,7 @@
                         </div>
                       </div>
                     </div>
-                    <span class="mode-card-title">Nommer un maximum</span>
+                    <span class="mode-card-title">Nommer un maximum de municipalités</span>
                     <span class="mode-card-desc"
                       >Nommez le plus de municipalités possible.</span
                     >
@@ -394,7 +405,7 @@
                   checked
                 />
                 <span data-i18n="miscSubmodeTop10Saints"
-                  >Top 10 des « Saint / Sainte » les plus fréquents</span
+                  >Les Saint/Sainte les plus fréquents.</span
                 >
               </label>
               <label class="option-toggle">
@@ -439,10 +450,6 @@
                 ></span>
               </summary>
               <div class="mrc-filter-body">
-                <p class="typemax-name-filter-hint" data-i18n="typemaxNameFilterHint">
-                  Cochez un ou plusieurs préfixes. Sans sélection, toutes les
-                  municipalités de la sélection sont incluses.
-                </p>
                 <div class="mrc-filter-actions">
                   <button
                     type="button"
@@ -514,9 +521,10 @@
           </div>
         </section>
 
+        <div id="game-chrome" class="game-chrome hidden">
         <div
           id="game-bar"
-          class="game-bar hidden"
+          class="game-bar"
           data-i18n-aria="gameBarAria"
           aria-label="Partie en cours"
         >
@@ -525,17 +533,6 @@
               Municipalité à trouver
             </p>
             <div id="prompt" class="game-prompt" aria-live="polite"></div>
-            <button
-              type="button"
-              id="locate-center-target"
-              class="btn-name-pass btn-name-center locate-center-target hidden"
-              data-i18n-aria="locateCenterTargetAria"
-            >
-              <span class="btn-name-center-text" data-i18n="nameCenterTarget"
-                >Centrer</span
-              >
-              <kbd class="key-cap" title="Maj gauche" aria-hidden="true">Maj</kbd>
-            </button>
             <form id="name-guess-form" class="name-guess-form hidden" autocomplete="off">
               <input
                 type="text"
@@ -596,14 +593,34 @@
             <div id="feedback" class="feedback game-feedback" aria-live="assertive"></div>
           </div>
           <div class="game-hud">
+            <button
+              type="button"
+              id="locate-center-target"
+              class="btn-name-pass btn-name-center locate-center-target hidden"
+              data-i18n-aria="locateCenterTargetAria"
+            >
+              <span class="btn-name-center-text" data-i18n="nameCenterTarget"
+                >Centrer</span
+              >
+              <kbd class="key-cap" title="Maj gauche" aria-hidden="true">Maj</kbd>
+            </button>
             <div
               id="locate-score"
               class="quiz-timer locate-score hidden"
               aria-live="polite"
               data-i18n-aria="locateScoreAria"
             >
-              <span class="quiz-timer-label" data-i18n="locateScoreLabel">Points</span>
-              <span id="locate-score-value" class="quiz-timer-value">0</span>
+              <div class="locate-score-head">
+                <span class="quiz-timer-label" data-i18n="locateScoreLabel">Points</span>
+                <span id="locate-score-value" class="quiz-timer-value">0</span>
+              </div>
+              <p
+                id="locate-score-legend"
+                class="locate-score-legend"
+                data-i18n="locateScoreLegend"
+              >
+                0 erreur : 3 pts · 1 erreur : 2 pts · 2 erreurs : 1 pt · 3 erreurs : 0 pt
+              </p>
             </div>
             <div id="quiz-timer" class="quiz-timer" aria-live="polite">
               <span class="quiz-timer-label" data-i18n="timeLabel">Temps</span>
@@ -621,16 +638,19 @@
             >
               Liste
             </button>
-            <button
-              type="button"
-              id="ten-replay-quiz"
-              class="btn-ten-replay hidden"
-              data-i18n="tenModeReplay"
-              data-i18n-aria="tenModeReplayAria"
-            >
-              Rejouer
-            </button>
           </div>
+        </div>
+        <div class="game-chrome-below">
+          <button
+            type="button"
+            id="ten-replay-quiz"
+            class="btn-ten-replay hidden"
+            data-i18n="tenModeReplay"
+            data-i18n-aria="tenModeReplayAria"
+          >
+            Rejouer
+          </button>
+        </div>
         </div>
 
         <aside
@@ -668,7 +688,7 @@
       crossorigin=""
     ></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js"></script>
-    <script src="i18n.js?v=20260722ak"></script>
-    <script src="app.js?v=20260722ak"></script>
+    <script src="i18n.js?v=20260722bh"></script>
+    <script src="app.js?v=20260722ay"></script>
   </body>
 </html>

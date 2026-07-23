@@ -37,6 +37,8 @@ const MESSAGES = {
       "Temps total : {time} · {n} municipalité{s}",
     locateScoreLabel: "Points",
     locateScoreAria: "Score total : {points} points",
+    locateScoreLegend:
+      "0 erreur : 3 pts · 1 erreur : 2 pts · 2 erreurs : 1 pt · 3 erreurs : 0 pt",
     locateQuizScore:
       "Score final : {points} points · Temps total : {time} · {n} municipalité{s}",
     nameModeQuizScore:
@@ -55,11 +57,11 @@ const MESSAGES = {
       "Erreur de chargement. Lancez scripts/fetch_municipalities.py puis servez le dossier avec un serveur local.",
     creatorWordsTitle: "Mots du créateur",
     creatorWordsBody:
-      "<p>Certaines entités ont été fusionnées, car il s'agissait du même toponyme (ex.&nbsp;: village et canton, paroisse et village, etc.)</p><p>Pour les homonymes qui désignent des lieux distincts&nbsp;; le libellé peut être précisé (réserve, municipalité de canton, etc.).</p>",
+      "<p>Certaines entités ont été fusionnées, car il s'agissait du même toponyme (ex.&nbsp;: village et canton, paroisse et village, etc.)</p><p>Pour les homonymes qui désignent des lieux distincts&nbsp;; le libellé peut être précisé (réserve, municipalité de canton, etc.).</p><p>Les superficies indiquées correspondent aux superficies terrestres des municipalités et excluent les grandes étendues d'eau.</p>",
     gameModeLegend: "Mode de jeu",
     gameModeLocate: "Trouver sur la carte (nom affiché)",
     gameModeName: "Nommer la municipalité (point clignotant)",
-    pickGameModeTitle: "Choisir le mode de jeu",
+    pickGameModeTitle: "Modes de jeu",
     gameModeLocateTitle: "Trouver sur la carte",
     gameModeLocateDesc: "Sélectionner le bon point sur la carte.",
     gameModeLocateAria: "Mode trouver sur la carte",
@@ -69,6 +71,8 @@ const MESSAGES = {
     modeDemoLocateLabel: "Saint-Augustin",
     modeDemoNameTyping: "Saint-Augustin",
     setupChangeMode: "← Changer de mode",
+    headerBackToModes: "← Modes",
+    headerBackToModesAria: "Retour au choix du mode de jeu",
     setupSelectedModeLocate: "Mode : trouver sur la carte",
     setupSelectedModeName: "Mode : nommer la municipalité",
     setupSelectedModeTen: "Mode : dix sur la carte",
@@ -84,10 +88,10 @@ const MESSAGES = {
     tenModeReplay: "Rejouer",
     tenModeReplayAria: "Rejouer avec 10 nouvelles municipalités",
     modeDemoTenLabel: "Roberval",
-    gameModeTypemaxTitle: "Nommer un maximum",
+    gameModeTypemaxTitle: "Nommer un maximum de municipalités",
     gameModeTypemaxDesc: "Nommez le plus de municipalités possible.",
     gameModeTypemaxAria: "Mode nommer un maximum de municipalités",
-    setupSelectedModeTypemax: "Mode : nommer un maximum",
+    setupSelectedModeTypemax: "Mode : nommer un maximum de municipalités",
     typemaxModeKicker: "Tapez le nom de chaque municipalité sur la carte",
     typemaxGuessPlaceholder: "Nom de la municipalité…",
     typemaxProgress: "{named} / {total} nommées",
@@ -105,8 +109,7 @@ const MESSAGES = {
     setupSelectedModeMisc: "Mode : quiz divers",
     miscSubmodeAria: "Choisir un défi du quiz divers",
     miscSubmodeHeading: "Défi",
-    miscSubmodeTop10Saints:
-      "Top 10 des « Saint / Sainte » les plus fréquents",
+    miscSubmodeTop10Saints: "Les Saint/Sainte les plus fréquents.",
     miscSubmodeTop10SaintsHint:
       "Classement calculé à partir de votre sélection (MRC et réserves). Le premier mot après Saint-, Sainte-, etc. compte (ex. Saint-Jean-sur-Richelieu → Saint-Jean).",
     miscSubmodeTop10LargestArea:
@@ -138,8 +141,6 @@ const MESSAGES = {
     miscQuizScoreGiveUp:
       "{correct}/{total} trouvés · réponses manquantes révélées. Temps : {time}.",
     typemaxNameFilterTitle: "Filtrer par début de nom",
-    typemaxNameFilterHint:
-      "Cochez un ou plusieurs préfixes (mode « nommer un maximum »). Sans sélection, toutes les municipalités comptent. Avec plusieurs cases, une municipalité doit correspondre à au moins l’un d’eux.",
     typemaxNameFilterSummary: "{active} filtre(s) · {n} municipalités",
     typemaxNameFilterSummaryAll: "Aucun filtre · {n} municipalités",
     typemaxNameFilterAria: "Filtrer par début de nom de municipalité",
@@ -207,6 +208,8 @@ const MESSAGES = {
     quizFinishedTime: "Total time: {time} · {n} {unit}",
     locateScoreLabel: "Score",
     locateScoreAria: "Total score: {points} points",
+    locateScoreLegend:
+      "0 wrong : 3 pts · 1 wrong : 2 pts · 2 wrong : 1 pt · 3 wrong : 0 pts",
     locateQuizScore:
       "Final score: {points} points · Total time: {time} · {n} {unit}",
     nameModeQuizScore:
@@ -225,11 +228,11 @@ const MESSAGES = {
       "Load failed. Run scripts/fetch_municipalities.py and serve this folder with a local web server.",
     creatorWordsTitle: "Creator’s note",
     creatorWordsBody:
-      "<p>Some entities were merged because they shared the same place name (e.g. village and township, parish and village, etc.).</p><p>Distinct homonyms are kept separate; labels may be clarified (reserve, township municipality, etc.).</p>",
+      "<p>Some entities were merged because they shared the same place name (e.g. village and township, parish and village, etc.).</p><p>Distinct homonyms are kept separate; labels may be clarified (reserve, township municipality, etc.).</p><p>Areas shown are municipalities’ land areas and exclude large bodies of water.</p>",
     gameModeLegend: "Game mode",
     gameModeLocate: "Find on the map (name shown)",
     gameModeName: "Name the municipality (blinking dot)",
-    pickGameModeTitle: "Pick a game mode",
+    pickGameModeTitle: "Gamemodes",
     gameModeLocateTitle: "Find on the map",
     gameModeLocateDesc: "Select the correct dot on the map.",
     gameModeLocateAria: "Find on map mode",
@@ -239,6 +242,8 @@ const MESSAGES = {
     modeDemoLocateLabel: "Saint-Augustin",
     modeDemoNameTyping: "Saint-Augustin",
     setupChangeMode: "← Change mode",
+    headerBackToModes: "← Modes",
+    headerBackToModesAria: "Back to game mode selection",
     setupSelectedModeLocate: "Mode: find on the map",
     setupSelectedModeName: "Mode: name the municipality",
     setupSelectedModeTen: "Mode: ten on the map",
@@ -256,7 +261,7 @@ const MESSAGES = {
     gameModeTypemaxTitle: "Name as many as you can",
     gameModeTypemaxDesc: "Name as many municipalities as you can.",
     gameModeTypemaxAria: "Name as many municipalities mode",
-    setupSelectedModeTypemax: "Mode: name as many as you can",
+    setupSelectedModeTypemax: "Mode: name as many municipalities as you can",
     typemaxModeKicker: "Type the name of each municipality on the map",
     typemaxGuessPlaceholder: "Municipality name…",
     typemaxProgress: "{named} / {total} named",
@@ -274,7 +279,7 @@ const MESSAGES = {
     setupSelectedModeMisc: "Mode: miscellaneous quiz",
     miscSubmodeAria: "Choose a miscellaneous quiz challenge",
     miscSubmodeHeading: "Challenge",
-    miscSubmodeTop10Saints: "Top 10 most common Saint / Sainte names",
+    miscSubmodeTop10Saints: "Top most common Saint / Sainte names",
     miscSubmodeTop10SaintsHint:
       "Rankings use your current selection (RCM and reserves). Only the first word after Saint-, Sainte-, etc. counts (e.g. Saint-Jean-sur-Richelieu → Saint-Jean).",
     miscSubmodeTop10LargestArea: "Top 10 largest municipalities (km²)",
@@ -304,8 +309,6 @@ const MESSAGES = {
     miscQuizScoreGiveUp:
       "{found}/{total} found · missing answers revealed. Time: {time}.",
     typemaxNameFilterTitle: "Filter by name prefix",
-    typemaxNameFilterHint:
-      "Check one or more prefixes (Name as many mode). With none selected, all municipalities in your selection are included. With several checked, a name must match at least one.",
     typemaxNameFilterSummary: "{active} filter(s) · {n} municipalities",
     typemaxNameFilterSummaryAll: "No filter · {n} municipalities",
     typemaxNameFilterAria: "Filter municipalities by name prefix",
