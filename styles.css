@@ -887,19 +887,22 @@ body.game-active .setup-section {
   grid-column: 3;
   grid-row: 1;
   justify-self: end;
-  align-self: start;
+  align-self: center;
   position: static;
   display: flex;
-  align-items: flex-start;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: flex-end;
   gap: 0.65rem;
   flex-shrink: 0;
-  max-width: min(22rem, 46vw);
-  flex-wrap: wrap;
 }
 
-body.game-mode-locate .game-hud {
-  max-width: min(15rem, 42vw);
+.game-hud .quiz-timer,
+.game-hud .btn-pause,
+.game-hud .btn-name-progress,
+.game-hud .locate-center-target {
+  flex-shrink: 0;
 }
 
 .game-prompt {
@@ -1621,7 +1624,9 @@ html[data-theme="dark"] .btn-typemax-give-up {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.2rem;
-  max-width: 13.5rem;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: min(14rem, 38vw);
 }
 
 .locate-score-head {
@@ -2273,8 +2278,8 @@ body.game-mode-misc .btn-name-center {
     width: 100%;
     justify-content: center;
     align-items: center;
-    gap: 0.4rem;
     flex-wrap: wrap;
+    gap: 0.4rem;
     margin-top: 0.35rem;
   }
 
