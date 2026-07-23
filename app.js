@@ -142,6 +142,41 @@ function municipalityPrimaryName(nom) {
   return String(nom).slice(0, bracket).trim();
 }
 
+/** Same locate/ten prompt (e.g. deux « Sainte-Perpétue » sans libellé distinct). */
+function isSameLocatePromptName(featureA, featureB) {
+  if (!featureA?.properties?.nom || !featureB?.properties?.nom) {
+    return false;
+  }
+  const nomA = String(featureA.properties.nom).trim();
+  const nomB = String(featureB.properties.nom).trim();
+  const normFullA = normalizeMunicipalityNameForMatch(nomA);
+  const normFullB = normalizeMunicipalityNameForMatch(nomB);
+  if (normFullA.length > 0 && normFullA === normFullB) {
+    return true;
+  }
+  const primA = municipalityPrimaryName(nomA);
+  const primB = municipalityPrimaryName(nomB);
+  if (nomA !== primA || nomB !== primB) {
+    return false;
+  }
+  const normPrimA = normalizeMunicipalityNameForMatch(primA);
+  const normPrimB = normalizeMunicipalityNameForMatch(primB);
+  return normPrimA.length > 0 && normPrimA === normPrimB;
+}
+
+function isCorrectLocateOrTenClick(clickedFeature) {
+  if (!target || !clickedFeature) {
+    return false;
+  }
+  if (String(clickedFeature.properties.code) === String(target.properties.code)) {
+    return true;
+  }
+  if (gameMode !== GAME_MODE_LOCATE && gameMode !== GAME_MODE_TEN) {
+    return false;
+  }
+  return isSameLocatePromptName(clickedFeature, target);
+}
+
 /** @type {Map<string, string[]>} */
 let municipalityAliasesByCode = new Map();
 /** @type {Map<string, Set<string>>} */
@@ -827,11 +862,12 @@ function revealTypeMaxMunicipality(feature) {
   }
 }
 
-function completeTargetSuccess(strikeCount) {
+function completeTargetSuccess(strikeCount, answeredFeature = null) {
   if (!target) {
     return;
   }
-  const code = target.properties.code;
+  roundAnswerFeature = answeredFeature ?? target;
+  const code = roundAnswerFeature.properties.code;
   solved = true;
   answerLabelActive =
     gameMode === GAME_MODE_LOCATE || gameMode === GAME_MODE_TEN;
@@ -1673,6 +1709,8 @@ const completedCodes = new Set();
 /** @type {Map<string, object>} */
 const completedMarkerStyles = new Map();
 let target = null;
+/** Dot actually clicked when several municipalities share the locate/ten prompt name. */
+let roundAnswerFeature = null;
 /** Prochaine question déjà tirée au hasard (pendant la manche en cours). */
 let queuedTarget = null;
 let solved = false;
@@ -3880,13 +3918,14 @@ function featureCenter(feature) {
 }
 
 function isZoomedNearTarget() {
-  if (!target) {
+  const f = roundAnswerFeature ?? target;
+  if (!f) {
     return false;
   }
   if (map.getZoom() < MIN_ZOOM_FOR_ANSWER_LABEL) {
     return false;
   }
-  const [lat, lng] = featureCenter(target);
+  const [lat, lng] = featureCenter(f);
   return map.getBounds().contains([lat, lng]);
 }
 
@@ -3894,7 +3933,8 @@ function updateCorrectNameLabel() {
   if (!target || !answerLabelActive) {
     return;
   }
-  const marker = markersByCode.get(target.properties.code);
+  const labelFeature = roundAnswerFeature ?? target;
+  const marker = markersByCode.get(labelFeature.properties.code);
   if (!marker) {
     return;
   }
@@ -3904,7 +3944,7 @@ function updateCorrectNameLabel() {
       ? "correct-name-label correct-name-label-fail"
       : "correct-name-label";
     if (!marker.getTooltip()) {
-      marker.bindTooltip(target.properties.nom, {
+      marker.bindTooltip(labelFeature.properties.nom, {
         permanent: true,
         direction: "top",
         className: labelClass,
@@ -3918,11 +3958,12 @@ function updateCorrectNameLabel() {
 }
 
 function clearCorrectNameLabel() {
-  if (!target) {
-    return;
+  for (const f of [roundAnswerFeature, target]) {
+    if (!f) {
+      continue;
+    }
+    markersByCode.get(f.properties.code)?.unbindTooltip();
   }
-  const marker = markersByCode.get(target.properties.code);
-  marker?.unbindTooltip();
 }
 
 function isClickNearTarget(latlng, maxPx = FAILED_ROUND_CLICK_TOLERANCE_PX) {
@@ -4234,6 +4275,7 @@ function pickTarget() {
   }
   target = queuedTarget;
   queuedTarget = null;
+  roundAnswerFeature = null;
 
   solved = false;
   failedRound = false;
@@ -4308,6 +4350,11 @@ function onMarkerClick(feature) {
 
   if (code === target.properties.code) {
     completeTargetSuccess(strikes);
+    return;
+  }
+
+  if (isCorrectLocateOrTenClick(feature)) {
+    completeTargetSuccess(strikes, feature);
     return;
   }
 
