@@ -1,6 +1,8 @@
 """Build favicon assets from favicon-source.png (white outlines on black)."""
 from __future__ import annotations
 
+import base64
+import io
 from pathlib import Path
 
 from PIL import Image, ImageFilter
@@ -9,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "favicon-source.png"
 OUT_PNG = ROOT / "favicon.png"
 OUT_APPLE = ROOT / "apple-touch-icon.png"
+OUT_ICO = ROOT / "favicon.ico"
 OUT_SVG = ROOT / "favicon.svg"
 
 BLUE = (0, 51, 153, 255)
@@ -23,7 +26,7 @@ def pixel_is_stroke(rgba: tuple[int, ...]) -> bool:
     return a > 48
 
 
-def main() -> None:
+def render_icon() -> Image.Image:
     im = Image.open(SRC).convert("RGBA")
     w, h = im.size
     px = im.load()
@@ -35,7 +38,6 @@ def main() -> None:
             if pixel_is_stroke(px[x, y]):
                 lpx[x, y] = 255
 
-    # Close small gaps in outlines before flood-fill
     stroke_l = stroke_l.filter(ImageFilter.MaxFilter(3))
     stroke = [[lpx[x, y] > 128 for x in range(w)] for y in range(h)]
 
@@ -67,17 +69,41 @@ def main() -> None:
                 opx[x, y] = BLUE
             elif not outside[y][x]:
                 opx[x, y] = WHITE
+    return out
 
+
+def png_bytes(img: Image.Image) -> bytes:
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def main() -> None:
+    out = render_icon()
     out.save(OUT_PNG, format="PNG")
-    resized = out.resize((180, 180), Image.Resampling.LANCZOS)
-    resized.save(OUT_APPLE, format="PNG")
 
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}">
-  <image width="{w}" height="{h}" href="favicon.png"/>
+    out.resize((180, 180), Image.Resampling.LANCZOS).save(OUT_APPLE, format="PNG")
+
+    ico_sizes = [
+        out.resize((16, 16), Image.Resampling.LANCZOS),
+        out.resize((32, 32), Image.Resampling.LANCZOS),
+        out.resize((48, 48), Image.Resampling.LANCZOS),
+    ]
+    ico_sizes[0].save(
+        OUT_ICO,
+        format="ICO",
+        sizes=[(16, 16), (32, 32), (48, 48)],
+        append_images=ico_sizes[1:],
+    )
+
+    embed = out.resize((128, 128), Image.Resampling.LANCZOS)
+    b64 = base64.standard_b64encode(png_bytes(embed)).decode("ascii")
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <image width="128" height="128" href="data:image/png;base64,{b64}"/>
 </svg>
 """
     OUT_SVG.write_text(svg, encoding="utf-8")
-    print(f"Wrote {OUT_PNG}, {OUT_APPLE}, {OUT_SVG}")
+    print(f"Wrote {OUT_PNG}, {OUT_APPLE}, {OUT_ICO}, {OUT_SVG}")
 
 
 if __name__ == "__main__":
