@@ -759,8 +759,19 @@ html[data-theme="dark"] .mode-card-title {
   margin-top: 0.35rem;
 }
 
+.setup-step-options .setup-prompt:empty {
+  display: none;
+  margin: 0;
+}
+
 .setup-step-options .setup-feedback {
   margin-top: -0.45rem;
+}
+
+.setup-step-options .setup-feedback:empty {
+  display: none;
+  min-height: 0;
+  margin: 0;
 }
 
 .setup-change-mode {
